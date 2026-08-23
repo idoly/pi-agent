@@ -23,6 +23,7 @@ import io.github.idoly.pi.ai.ToolCallContent;
 import io.github.idoly.pi.ai.ToolDefinition;
 import io.github.idoly.pi.ai.ToolResultMessage;
 import io.github.idoly.pi.ai.Usage;
+import io.github.idoly.pi.ai.UsageCosts;
 import io.github.idoly.pi.ai.UserMessage;
 import io.github.idoly.pi.vertx.SseEvent;
 
@@ -747,8 +748,8 @@ public final class OpenAiResponsesCodec {
         private AssistantMessage snapshot() {
             return new AssistantMessage(
                     parts.stream().map(Part::content).toList(),
-                    model.api(), model.provider(), model.id(), usage,
-                    stopReason, errorMessage, timestamp, responseId, rawStopReason
+                    model.api(), model.provider(), model.id(),
+                    UsageCosts.calculate(model, usage), stopReason, errorMessage, timestamp, responseId, rawStopReason
             );
         }
 

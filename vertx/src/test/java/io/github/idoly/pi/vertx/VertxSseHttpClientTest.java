@@ -58,6 +58,20 @@ class VertxSseHttpClientTest {
                                 .setChunked(true)
                                 .putHeader("content-type", "text/event-stream")
                                 .writeHead();
+                    } else if (path.equals("/binary")) {
+                        var response = request.response()
+                                .setChunked(true)
+                                .putHeader(
+                                        "content-type",
+                                        "application/vnd.amazon.eventstream"
+                                );
+                        response.write(io.vertx.core.buffer.Buffer.buffer(
+                                new byte[]{0, 1, 2, 3}
+                        )).onComplete(ignoredWrite -> response.end(
+                                io.vertx.core.buffer.Buffer.buffer(
+                                        new byte[]{4, 5, 6}
+                                )
+                        ));
                     } else {
                         request.response()
                                 .putHeader("content-type", "text/event-stream; charset=utf-8")
@@ -84,6 +98,28 @@ class VertxSseHttpClientTest {
         assertEquals(List.of("one", "two"), first.stream().map(SseEvent::data).toList());
         assertEquals(List.of("one", "two"), second.stream().map(SseEvent::data).toList());
         assertEquals(1, connections.get());
+    }
+
+    @Test
+    void streamsBinaryResponsesWithoutSseDecoding() {
+        List<byte[]> chunks = client.executeBinary(
+                request("/binary"), NeverCancelled.INSTANCE
+        ).chain(response -> response.chunks().collect().asList())
+                .await().atMost(wait);
+        byte[] joined = chunks.stream().reduce(
+                new byte[0],
+                (left, right) -> {
+                    byte[] value = java.util.Arrays.copyOf(
+                            left, left.length + right.length
+                    );
+                    System.arraycopy(right, 0, value, left.length, right.length);
+                    return value;
+                }
+        );
+        assertEquals(List.of(0, 1, 2, 3, 4, 5, 6),
+                java.util.stream.IntStream.range(0, joined.length)
+                        .map(index -> Byte.toUnsignedInt(joined[index]))
+                        .boxed().toList());
     }
 
     @Test

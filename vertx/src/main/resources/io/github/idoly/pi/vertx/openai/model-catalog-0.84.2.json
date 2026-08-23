@@ -17,6 +17,12 @@
         "contextWindow": 8192,
         "maxTokens": 8192
       },
+      "cost": {
+        "input": 30,
+        "output": 60,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
       "compat": {}
     },
     {
@@ -33,6 +39,12 @@
         ],
         "contextWindow": 128000,
         "maxTokens": 4096
+      },
+      "cost": {
+        "input": 10,
+        "output": 30,
+        "cacheRead": 0,
+        "cacheWrite": 0
       },
       "compat": {}
     },
@@ -51,6 +63,12 @@
         "contextWindow": 1047576,
         "maxTokens": 32768
       },
+      "cost": {
+        "input": 2,
+        "output": 8,
+        "cacheRead": 0.5,
+        "cacheWrite": 0
+      },
       "compat": {}
     },
     {
@@ -67,6 +85,12 @@
         ],
         "contextWindow": 1047576,
         "maxTokens": 32768
+      },
+      "cost": {
+        "input": 0.4,
+        "output": 1.6,
+        "cacheRead": 0.1,
+        "cacheWrite": 0
       },
       "compat": {}
     },
@@ -85,6 +109,12 @@
         "contextWindow": 1047576,
         "maxTokens": 32768
       },
+      "cost": {
+        "input": 0.1,
+        "output": 0.4,
+        "cacheRead": 0.025,
+        "cacheWrite": 0
+      },
       "compat": {}
     },
     {
@@ -101,6 +131,12 @@
         ],
         "contextWindow": 128000,
         "maxTokens": 16384
+      },
+      "cost": {
+        "input": 2.5,
+        "output": 10,
+        "cacheRead": 1.25,
+        "cacheWrite": 0
       },
       "compat": {}
     },
@@ -119,6 +155,12 @@
         "contextWindow": 128000,
         "maxTokens": 4096
       },
+      "cost": {
+        "input": 5,
+        "output": 15,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
       "compat": {}
     },
     {
@@ -135,6 +177,12 @@
         ],
         "contextWindow": 128000,
         "maxTokens": 16384
+      },
+      "cost": {
+        "input": 2.5,
+        "output": 10,
+        "cacheRead": 1.25,
+        "cacheWrite": 0
       },
       "compat": {}
     },
@@ -153,6 +201,12 @@
         "contextWindow": 128000,
         "maxTokens": 16384
       },
+      "cost": {
+        "input": 2.5,
+        "output": 10,
+        "cacheRead": 1.25,
+        "cacheWrite": 0
+      },
       "compat": {}
     },
     {
@@ -169,6 +223,12 @@
         ],
         "contextWindow": 128000,
         "maxTokens": 16384
+      },
+      "cost": {
+        "input": 0.15,
+        "output": 0.6,
+        "cacheRead": 0.075,
+        "cacheWrite": 0
       },
       "compat": {}
     },
@@ -189,6 +249,12 @@
         "thinkingLevelMap": {
           "off": null
         }
+      },
+      "cost": {
+        "input": 1.25,
+        "output": 10,
+        "cacheRead": 0.125,
+        "cacheWrite": 0
       },
       "compat": {
         "supportsOpenAIGrammarTools": true
@@ -212,6 +278,12 @@
           "off": null
         }
       },
+      "cost": {
+        "input": 1.25,
+        "output": 10,
+        "cacheRead": 0.125,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsOpenAIGrammarTools": true
       }
@@ -233,6 +305,12 @@
         "thinkingLevelMap": {
           "off": null
         }
+      },
+      "cost": {
+        "input": 0.25,
+        "output": 2,
+        "cacheRead": 0.025,
+        "cacheWrite": 0
       },
       "compat": {
         "supportsOpenAIGrammarTools": true
@@ -256,6 +334,12 @@
           "off": null
         }
       },
+      "cost": {
+        "input": 0.05,
+        "output": 0.4,
+        "cacheRead": 0.005,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsOpenAIGrammarTools": true
       }
@@ -278,6 +362,12 @@
           "off": null
         }
       },
+      "cost": {
+        "input": 15,
+        "output": 120,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsOpenAIGrammarTools": true
       }
@@ -299,6 +389,12 @@
         "thinkingLevelMap": {
           "off": null
         }
+      },
+      "cost": {
+        "input": 1.25,
+        "output": 10,
+        "cacheRead": 0.125,
+        "cacheWrite": 0
       },
       "compat": {
         "supportsOpenAIGrammarTools": true
@@ -323,6 +419,12 @@
           "xhigh": "xhigh"
         }
       },
+      "cost": {
+        "input": 1.75,
+        "output": 14,
+        "cacheRead": 0.175,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsOpenAIGrammarTools": true
       }
@@ -345,6 +447,12 @@
           "off": null,
           "xhigh": "xhigh"
         }
+      },
+      "cost": {
+        "input": 1.75,
+        "output": 14,
+        "cacheRead": 0.175,
+        "cacheWrite": 0
       },
       "compat": {
         "supportsOpenAIGrammarTools": true
@@ -369,6 +477,12 @@
           "xhigh": "xhigh"
         }
       },
+      "cost": {
+        "input": 21,
+        "output": 168,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsOpenAIGrammarTools": true
       }
@@ -391,6 +505,12 @@
           "off": null,
           "xhigh": "xhigh"
         }
+      },
+      "cost": {
+        "input": 1.75,
+        "output": 14,
+        "cacheRead": 0.175,
+        "cacheWrite": 0
       },
       "compat": {
         "supportsOpenAIGrammarTools": true
@@ -415,6 +535,12 @@
           "xhigh": "xhigh"
         }
       },
+      "cost": {
+        "input": 1.75,
+        "output": 14,
+        "cacheRead": 0.175,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsOpenAIGrammarTools": true
       }
@@ -437,6 +563,12 @@
           "off": null,
           "xhigh": "xhigh"
         }
+      },
+      "cost": {
+        "input": 1.75,
+        "output": 14,
+        "cacheRead": 0.175,
+        "cacheWrite": 0
       },
       "compat": {
         "supportsOpenAIGrammarTools": true
@@ -461,6 +593,12 @@
           "xhigh": "xhigh"
         }
       },
+      "cost": {
+        "input": 2.5,
+        "output": 15,
+        "cacheRead": 0.25,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsOpenAIGrammarTools": true
       }
@@ -483,6 +621,12 @@
           "off": null,
           "xhigh": "xhigh"
         }
+      },
+      "cost": {
+        "input": 0.75,
+        "output": 4.5,
+        "cacheRead": 0.075,
+        "cacheWrite": 0
       },
       "compat": {
         "supportsOpenAIGrammarTools": true
@@ -507,6 +651,12 @@
           "xhigh": "xhigh"
         }
       },
+      "cost": {
+        "input": 0.2,
+        "output": 1.25,
+        "cacheRead": 0.02,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsOpenAIGrammarTools": true
       }
@@ -530,6 +680,12 @@
           "xhigh": "xhigh"
         }
       },
+      "cost": {
+        "input": 30,
+        "output": 180,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsOpenAIGrammarTools": true
       }
@@ -552,6 +708,12 @@
           "off": null,
           "xhigh": "xhigh"
         }
+      },
+      "cost": {
+        "input": 5,
+        "output": 30,
+        "cacheRead": 0.5,
+        "cacheWrite": 0
       },
       "compat": {
         "supportsOpenAIGrammarTools": true
@@ -578,6 +740,12 @@
           "low": null
         }
       },
+      "cost": {
+        "input": 30,
+        "output": 180,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsOpenAIGrammarTools": true
       }
@@ -601,6 +769,12 @@
           "xhigh": "xhigh",
           "max": "max"
         }
+      },
+      "cost": {
+        "input": 0.2,
+        "output": 1.2,
+        "cacheRead": 0.02,
+        "cacheWrite": 0.25
       },
       "compat": {
         "supportsOpenAIGrammarTools": true
@@ -626,6 +800,12 @@
           "max": "max"
         }
       },
+      "cost": {
+        "input": 5,
+        "output": 30,
+        "cacheRead": 0.5,
+        "cacheWrite": 6.25
+      },
       "compat": {
         "supportsOpenAIGrammarTools": true
       }
@@ -650,6 +830,12 @@
           "max": "max"
         }
       },
+      "cost": {
+        "input": 2,
+        "output": 12,
+        "cacheRead": 0.2,
+        "cacheWrite": 2.5
+      },
       "compat": {
         "supportsOpenAIGrammarTools": true
       }
@@ -669,6 +855,12 @@
         "contextWindow": 128000,
         "maxTokens": 32000
       },
+      "cost": {
+        "input": 4,
+        "output": 24,
+        "cacheRead": 0.4,
+        "cacheWrite": 0
+      },
       "compat": {}
     },
     {
@@ -685,6 +877,12 @@
         ],
         "contextWindow": 200000,
         "maxTokens": 100000
+      },
+      "cost": {
+        "input": 15,
+        "output": 60,
+        "cacheRead": 7.5,
+        "cacheWrite": 0
       },
       "compat": {}
     },
@@ -703,6 +901,12 @@
         "contextWindow": 200000,
         "maxTokens": 100000
       },
+      "cost": {
+        "input": 150,
+        "output": 600,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
       "compat": {}
     },
     {
@@ -720,6 +924,12 @@
         "contextWindow": 200000,
         "maxTokens": 100000
       },
+      "cost": {
+        "input": 2,
+        "output": 8,
+        "cacheRead": 0.5,
+        "cacheWrite": 0
+      },
       "compat": {}
     },
     {
@@ -735,6 +945,12 @@
         ],
         "contextWindow": 200000,
         "maxTokens": 100000
+      },
+      "cost": {
+        "input": 1.1,
+        "output": 4.4,
+        "cacheRead": 0.55,
+        "cacheWrite": 0
       },
       "compat": {}
     },
@@ -753,6 +969,12 @@
         "contextWindow": 200000,
         "maxTokens": 100000
       },
+      "cost": {
+        "input": 20,
+        "output": 80,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
       "compat": {}
     },
     {
@@ -770,6 +992,12 @@
         "contextWindow": 200000,
         "maxTokens": 100000
       },
+      "cost": {
+        "input": 1.1,
+        "output": 4.4,
+        "cacheRead": 0.275,
+        "cacheWrite": 0
+      },
       "compat": {}
     },
     {
@@ -785,6 +1013,12 @@
         ],
         "contextWindow": 8192,
         "maxTokens": 8192
+      },
+      "cost": {
+        "input": 30,
+        "output": 60,
+        "cacheRead": 0,
+        "cacheWrite": 0
       },
       "compat": {
         "supportsStrictMode": true
@@ -805,6 +1039,12 @@
         "contextWindow": 128000,
         "maxTokens": 4096
       },
+      "cost": {
+        "input": 10,
+        "output": 30,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsStrictMode": true
       }
@@ -823,6 +1063,12 @@
         ],
         "contextWindow": 1047576,
         "maxTokens": 32768
+      },
+      "cost": {
+        "input": 2,
+        "output": 8,
+        "cacheRead": 0.5,
+        "cacheWrite": 0
       },
       "compat": {
         "supportsStrictMode": true
@@ -843,6 +1089,12 @@
         "contextWindow": 1047576,
         "maxTokens": 32768
       },
+      "cost": {
+        "input": 0.4,
+        "output": 1.6,
+        "cacheRead": 0.1,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsStrictMode": true
       }
@@ -861,6 +1113,12 @@
         ],
         "contextWindow": 1047576,
         "maxTokens": 32768
+      },
+      "cost": {
+        "input": 0.1,
+        "output": 0.4,
+        "cacheRead": 0.025,
+        "cacheWrite": 0
       },
       "compat": {
         "supportsStrictMode": true
@@ -881,6 +1139,12 @@
         "contextWindow": 128000,
         "maxTokens": 16384
       },
+      "cost": {
+        "input": 2.5,
+        "output": 10,
+        "cacheRead": 1.25,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsStrictMode": true
       }
@@ -899,6 +1163,12 @@
         ],
         "contextWindow": 128000,
         "maxTokens": 4096
+      },
+      "cost": {
+        "input": 5,
+        "output": 15,
+        "cacheRead": 0,
+        "cacheWrite": 0
       },
       "compat": {
         "supportsStrictMode": true
@@ -919,6 +1189,12 @@
         "contextWindow": 128000,
         "maxTokens": 16384
       },
+      "cost": {
+        "input": 2.5,
+        "output": 10,
+        "cacheRead": 1.25,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsStrictMode": true
       }
@@ -938,6 +1214,12 @@
         "contextWindow": 128000,
         "maxTokens": 16384
       },
+      "cost": {
+        "input": 2.5,
+        "output": 10,
+        "cacheRead": 1.25,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsStrictMode": true
       }
@@ -956,6 +1238,12 @@
         ],
         "contextWindow": 128000,
         "maxTokens": 16384
+      },
+      "cost": {
+        "input": 0.15,
+        "output": 0.6,
+        "cacheRead": 0.075,
+        "cacheWrite": 0
       },
       "compat": {
         "supportsStrictMode": true
@@ -985,6 +1273,12 @@
           "max": null
         }
       },
+      "cost": {
+        "input": 1.25,
+        "output": 10,
+        "cacheRead": 0.125,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsStrictMode": true,
         "supportsOpenAIGrammarTools": true
@@ -1007,6 +1301,12 @@
         "thinkingLevelMap": {
           "off": null
         }
+      },
+      "cost": {
+        "input": 1.25,
+        "output": 10,
+        "cacheRead": 0.125,
+        "cacheWrite": 0
       },
       "compat": {
         "supportsStrictMode": true,
@@ -1037,6 +1337,12 @@
           "max": null
         }
       },
+      "cost": {
+        "input": 0.25,
+        "output": 2,
+        "cacheRead": 0.025,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsStrictMode": true,
         "supportsOpenAIGrammarTools": true
@@ -1065,6 +1371,12 @@
           "xhigh": null,
           "max": null
         }
+      },
+      "cost": {
+        "input": 0.05,
+        "output": 0.4,
+        "cacheRead": 0.005,
+        "cacheWrite": 0
       },
       "compat": {
         "supportsStrictMode": true,
@@ -1095,6 +1407,12 @@
           "max": null
         }
       },
+      "cost": {
+        "input": 15,
+        "output": 120,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsStrictMode": true,
         "supportsOpenAIGrammarTools": true
@@ -1123,6 +1441,12 @@
           "xhigh": null,
           "max": null
         }
+      },
+      "cost": {
+        "input": 1.25,
+        "output": 10,
+        "cacheRead": 0.125,
+        "cacheWrite": 0
       },
       "compat": {
         "supportsStrictMode": true,
@@ -1153,6 +1477,12 @@
           "max": null
         }
       },
+      "cost": {
+        "input": 1.75,
+        "output": 14,
+        "cacheRead": 0.175,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsStrictMode": true,
         "supportsOpenAIGrammarTools": true
@@ -1181,6 +1511,12 @@
           "xhigh": "xhigh",
           "max": null
         }
+      },
+      "cost": {
+        "input": 1.75,
+        "output": 14,
+        "cacheRead": 0.175,
+        "cacheWrite": 0
       },
       "compat": {
         "supportsStrictMode": true,
@@ -1211,6 +1547,12 @@
           "max": null
         }
       },
+      "cost": {
+        "input": 21,
+        "output": 168,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsStrictMode": true,
         "supportsOpenAIGrammarTools": true
@@ -1234,6 +1576,12 @@
           "off": null,
           "xhigh": "xhigh"
         }
+      },
+      "cost": {
+        "input": 1.75,
+        "output": 14,
+        "cacheRead": 0.175,
+        "cacheWrite": 0
       },
       "compat": {
         "supportsStrictMode": true,
@@ -1264,6 +1612,12 @@
           "max": null
         }
       },
+      "cost": {
+        "input": 1.75,
+        "output": 14,
+        "cacheRead": 0.175,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsStrictMode": true,
         "supportsOpenAIGrammarTools": true
@@ -1293,6 +1647,12 @@
           "max": null
         }
       },
+      "cost": {
+        "input": 1.75,
+        "output": 14,
+        "cacheRead": 0.175,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsStrictMode": true,
         "supportsOpenAIGrammarTools": true
@@ -1321,6 +1681,21 @@
           "xhigh": "xhigh",
           "max": null
         }
+      },
+      "cost": {
+        "input": 2.5,
+        "output": 15,
+        "cacheRead": 0.25,
+        "cacheWrite": 0,
+        "tiers": [
+          {
+            "inputTokensAbove": 272000,
+            "input": 5,
+            "output": 22.5,
+            "cacheRead": 0.5,
+            "cacheWrite": 0
+          }
+        ]
       },
       "compat": {
         "supportsStrictMode": true,
@@ -1353,6 +1728,12 @@
           "max": null
         }
       },
+      "cost": {
+        "input": 0.75,
+        "output": 4.5,
+        "cacheRead": 0.075,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsStrictMode": true,
         "supportsOpenAIGrammarTools": true,
@@ -1384,6 +1765,12 @@
           "max": null
         }
       },
+      "cost": {
+        "input": 0.2,
+        "output": 1.25,
+        "cacheRead": 0.02,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsStrictMode": true,
         "supportsOpenAIGrammarTools": true
@@ -1412,6 +1799,21 @@
           "xhigh": "xhigh",
           "max": null
         }
+      },
+      "cost": {
+        "input": 30,
+        "output": 180,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "tiers": [
+          {
+            "inputTokensAbove": 272000,
+            "input": 60,
+            "output": 270,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          }
+        ]
       },
       "compat": {
         "supportsStrictMode": true,
@@ -1444,6 +1846,21 @@
           "max": null
         }
       },
+      "cost": {
+        "input": 5,
+        "output": 30,
+        "cacheRead": 0.5,
+        "cacheWrite": 0,
+        "tiers": [
+          {
+            "inputTokensAbove": 272000,
+            "input": 10,
+            "output": 45,
+            "cacheRead": 1,
+            "cacheWrite": 0
+          }
+        ]
+      },
       "compat": {
         "supportsStrictMode": true,
         "supportsOpenAIGrammarTools": true,
@@ -1475,6 +1892,21 @@
           "max": null
         }
       },
+      "cost": {
+        "input": 30,
+        "output": 180,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "tiers": [
+          {
+            "inputTokensAbove": 272000,
+            "input": 60,
+            "output": 270,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          }
+        ]
+      },
       "compat": {
         "supportsStrictMode": true,
         "supportsOpenAIGrammarTools": true
@@ -1503,6 +1935,21 @@
           "xhigh": "xhigh",
           "max": "max"
         }
+      },
+      "cost": {
+        "input": 0.2,
+        "output": 1.2,
+        "cacheRead": 0.02,
+        "cacheWrite": 0.25,
+        "tiers": [
+          {
+            "inputTokensAbove": 272000,
+            "input": 0.4,
+            "output": 1.8,
+            "cacheRead": 0.04,
+            "cacheWrite": 0.5
+          }
+        ]
       },
       "compat": {
         "supportsStrictMode": true,
@@ -1536,6 +1983,21 @@
           "max": "max"
         }
       },
+      "cost": {
+        "input": 5,
+        "output": 30,
+        "cacheRead": 0.5,
+        "cacheWrite": 6.25,
+        "tiers": [
+          {
+            "inputTokensAbove": 272000,
+            "input": 10,
+            "output": 45,
+            "cacheRead": 1,
+            "cacheWrite": 12.5
+          }
+        ]
+      },
       "compat": {
         "supportsStrictMode": true,
         "supportsOpenAIGrammarTools": true,
@@ -1567,6 +2029,21 @@
           "xhigh": "xhigh",
           "max": "max"
         }
+      },
+      "cost": {
+        "input": 2,
+        "output": 12,
+        "cacheRead": 0.2,
+        "cacheWrite": 2.5,
+        "tiers": [
+          {
+            "inputTokensAbove": 272000,
+            "input": 4,
+            "output": 18,
+            "cacheRead": 0.4,
+            "cacheWrite": 5
+          }
+        ]
       },
       "compat": {
         "supportsStrictMode": true,
@@ -1600,6 +2077,12 @@
           "max": null
         }
       },
+      "cost": {
+        "input": 4,
+        "output": 24,
+        "cacheRead": 0.4,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsStrictMode": true
       }
@@ -1627,6 +2110,12 @@
           "xhigh": null,
           "max": null
         }
+      },
+      "cost": {
+        "input": 15,
+        "output": 60,
+        "cacheRead": 7.5,
+        "cacheWrite": 0
       },
       "compat": {
         "supportsStrictMode": true
@@ -1656,6 +2145,12 @@
           "max": null
         }
       },
+      "cost": {
+        "input": 150,
+        "output": 600,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsStrictMode": true
       }
@@ -1684,6 +2179,12 @@
           "max": null
         }
       },
+      "cost": {
+        "input": 2,
+        "output": 8,
+        "cacheRead": 0.5,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsStrictMode": true
       }
@@ -1710,6 +2211,12 @@
           "xhigh": null,
           "max": null
         }
+      },
+      "cost": {
+        "input": 1.1,
+        "output": 4.4,
+        "cacheRead": 0.55,
+        "cacheWrite": 0
       },
       "compat": {
         "supportsStrictMode": true
@@ -1739,6 +2246,12 @@
           "max": null
         }
       },
+      "cost": {
+        "input": 20,
+        "output": 80,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsStrictMode": true
       }
@@ -1767,6 +2280,12 @@
           "max": null
         }
       },
+      "cost": {
+        "input": 1.1,
+        "output": 4.4,
+        "cacheRead": 0.275,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsStrictMode": true
       }
@@ -1788,6 +2307,12 @@
           "xhigh": "xhigh",
           "minimal": "low"
         }
+      },
+      "cost": {
+        "input": 1.75,
+        "output": 14,
+        "cacheRead": 0.175,
+        "cacheWrite": 0
       },
       "compat": {
         "supportsOpenAIGrammarTools": true
@@ -1811,6 +2336,21 @@
           "xhigh": "xhigh",
           "minimal": "low"
         }
+      },
+      "cost": {
+        "input": 2.5,
+        "output": 15,
+        "cacheRead": 0.25,
+        "cacheWrite": 0,
+        "tiers": [
+          {
+            "inputTokensAbove": 272000,
+            "input": 5,
+            "output": 22.5,
+            "cacheRead": 0.5,
+            "cacheWrite": 0
+          }
+        ]
       },
       "compat": {
         "supportsOpenAIGrammarTools": true,
@@ -1836,6 +2376,12 @@
           "minimal": "low"
         }
       },
+      "cost": {
+        "input": 0.75,
+        "output": 4.5,
+        "cacheRead": 0.075,
+        "cacheWrite": 0
+      },
       "compat": {
         "supportsOpenAIGrammarTools": true,
         "supportsToolSearch": true
@@ -1859,6 +2405,21 @@
           "xhigh": "xhigh",
           "minimal": "low"
         }
+      },
+      "cost": {
+        "input": 5,
+        "output": 30,
+        "cacheRead": 0.5,
+        "cacheWrite": 0,
+        "tiers": [
+          {
+            "inputTokensAbove": 272000,
+            "input": 10,
+            "output": 45,
+            "cacheRead": 1,
+            "cacheWrite": 0
+          }
+        ]
       },
       "compat": {
         "supportsOpenAIGrammarTools": true,
@@ -1884,6 +2445,21 @@
           "max": "max",
           "minimal": "low"
         }
+      },
+      "cost": {
+        "input": 0.2,
+        "output": 1.2,
+        "cacheRead": 0.02,
+        "cacheWrite": 0.25,
+        "tiers": [
+          {
+            "inputTokensAbove": 272000,
+            "input": 0.4,
+            "output": 1.8,
+            "cacheRead": 0.04,
+            "cacheWrite": 0.5
+          }
+        ]
       },
       "compat": {
         "supportsOpenAIGrammarTools": true,
@@ -1911,6 +2487,21 @@
           "minimal": "low"
         }
       },
+      "cost": {
+        "input": 5,
+        "output": 30,
+        "cacheRead": 0.5,
+        "cacheWrite": 6.25,
+        "tiers": [
+          {
+            "inputTokensAbove": 272000,
+            "input": 10,
+            "output": 45,
+            "cacheRead": 1,
+            "cacheWrite": 12.5
+          }
+        ]
+      },
       "compat": {
         "supportsOpenAIGrammarTools": true,
         "supportsAdditionalTools": true,
@@ -1936,6 +2527,21 @@
           "max": "max",
           "minimal": "low"
         }
+      },
+      "cost": {
+        "input": 2,
+        "output": 12,
+        "cacheRead": 0.2,
+        "cacheWrite": 2.5,
+        "tiers": [
+          {
+            "inputTokensAbove": 272000,
+            "input": 4,
+            "output": 18,
+            "cacheRead": 0.4,
+            "cacheWrite": 5
+          }
+        ]
       },
       "compat": {
         "supportsOpenAIGrammarTools": true,

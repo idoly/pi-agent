@@ -23,6 +23,7 @@ import io.github.idoly.pi.ai.ToolCallContent;
 import io.github.idoly.pi.ai.ToolDefinition;
 import io.github.idoly.pi.ai.ToolResultMessage;
 import io.github.idoly.pi.ai.Usage;
+import io.github.idoly.pi.ai.UsageCosts;
 import io.github.idoly.pi.ai.UserMessage;
 import io.github.idoly.pi.vertx.SseEvent;
 
@@ -394,6 +395,24 @@ public final class OpenAiChatCodec {
         }
 
         private void appendText(JsonNode value, List<AssistantStreamEvent> output) {
+            if (value.isArray()) {
+                for (JsonNode chunk : value) {
+                    String type = chunk.path("type").asText();
+                    if (type.equals("text")) {
+                        appendText(chunk.path("text"), output);
+                    } else if (type.equals("thinking")) {
+                        JsonNode thinking = chunk.path("thinking");
+                        if (thinking.isArray()) {
+                            for (JsonNode part : thinking) {
+                                appendThinkingText(part.path("text"), output);
+                            }
+                        } else {
+                            appendThinkingText(thinking, output);
+                        }
+                    }
+                }
+                return;
+            }
             if (!value.isTextual() || value.textValue().isEmpty()) {
                 return;
             }
@@ -407,6 +426,19 @@ public final class OpenAiChatCodec {
             text.value.append(value.textValue());
             output.add(new AssistantStreamEvent.ContentDelta(
                     ContentKind.TEXT, parts.indexOf(text), value.textValue(), snapshot()
+            ));
+        }
+
+        private void appendThinkingText(
+                JsonNode value,
+                List<AssistantStreamEvent> output
+        ) {
+            if (!value.isTextual() || value.textValue().isEmpty()) return;
+            TextPart thinking = ensureThinking(output);
+            thinking.value.append(value.textValue());
+            output.add(new AssistantStreamEvent.ContentDelta(
+                    ContentKind.THINKING, parts.indexOf(thinking),
+                    value.textValue(), snapshot()
             ));
         }
 
@@ -608,7 +640,7 @@ public final class OpenAiChatCodec {
                     model.api(),
                     model.provider(),
                     model.id(),
-                    usage,
+                    UsageCosts.calculate(model, usage),
                     stopReason,
                     errorMessage,
                     timestamp,
@@ -620,8 +652,8 @@ public final class OpenAiChatCodec {
         private AssistantMessage errorMessage(String message) {
             return new AssistantMessage(
                     parts.stream().map(Part::content).toList(),
-                    model.api(), model.provider(), model.id(), usage,
-                    StopReason.ERROR, message, timestamp, responseId, rawStopReason
+                    model.api(), model.provider(), model.id(),
+                    UsageCosts.calculate(model, usage), StopReason.ERROR, message, timestamp, responseId, rawStopReason
             );
         }
 

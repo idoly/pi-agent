@@ -558,6 +558,7 @@ final class JsonlSessionCodec {
                 case TextContent text -> {
                     node.put("type", "text");
                     node.put("text", text.text());
+                    put(node, "signature", text.signature());
                 }
                 case ImageContent image -> {
                     node.put("type", "image");
@@ -574,6 +575,7 @@ final class JsonlSessionCodec {
                     node.put("id", call.id());
                     node.put("name", call.name());
                     node.set("arguments", MAPPER.valueToTree(call.arguments()));
+                    put(node, "signature", call.signature());
                 }
             }
             values.add(node);
@@ -585,13 +587,17 @@ final class JsonlSessionCodec {
         ArrayList<ContentBlock> blocks = new ArrayList<>();
         for (JsonNode node : array(value, "content")) {
             blocks.add(switch (text(node, "type")) {
-                case "text" -> new TextContent(text(node, "text"));
+                case "text" -> new TextContent(
+                        text(node, "text"), optionalText(node, "signature")
+                );
                 case "image" -> new ImageContent(text(node, "data"), text(node, "mimeType"));
                 case "thinking" -> new ThinkingContent(
                         text(node, "thinking"), optionalText(node, "signature")
                 );
                 case "toolCall" -> new ToolCallContent(
-                        text(node, "id"), text(node, "name"), objectMap(required(node, "arguments"))
+                        text(node, "id"), text(node, "name"),
+                        objectMap(required(node, "arguments")),
+                        optionalText(node, "signature")
                 );
                 default -> throw invalid("has unknown content type " + text(node, "type"));
             });

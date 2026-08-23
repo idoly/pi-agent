@@ -68,7 +68,7 @@ public final class OpenAiCompatibleModelStream implements ModelStream, AutoClose
         Objects.requireNonNull(model, "model");
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(options, "options");
-        Map<String, String> headers = new LinkedHashMap<>();
+        Map<String, String> headers = new LinkedHashMap<>(options.headers());
         headers.put("content-type", "application/json");
         if (options.apiKey() != null && !options.apiKey().isBlank()) {
             headers.put("authorization", "Bearer " + options.apiKey());

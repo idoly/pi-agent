@@ -35,6 +35,7 @@ for (const [provider, exportName] of providers) {
         maxTokens: model.maxTokens,
         ...(model.thinkingLevelMap && { thinkingLevelMap: model.thinkingLevelMap }),
       },
+      cost: model.cost ?? {},
       compat: model.compat ?? {},
     });
   }

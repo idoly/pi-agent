@@ -80,6 +80,17 @@ public final class VertxSseHttpClient implements AutoCloseable {
         return Uni.createFrom().deferred(() -> executeDeferred(request, cancellation));
     }
 
+    public Uni<BinaryHttpResponse> executeBinary(
+            SseHttpRequest request,
+            CancellationSignal cancellation
+    ) {
+        Objects.requireNonNull(request, "request");
+        Objects.requireNonNull(cancellation, "cancellation");
+        return Uni.createFrom().deferred(() ->
+                executeBinaryDeferred(request, cancellation)
+        );
+    }
+
     private Uni<SseHttpResponse> executeDeferred(
             SseHttpRequest request,
             CancellationSignal cancellation
@@ -103,6 +114,28 @@ public final class VertxSseHttpClient implements AutoCloseable {
 
         return uni(client.request(requestOptions))
                 .chain(outbound -> send(outbound, request, cancellation));
+    }
+
+    private Uni<BinaryHttpResponse> executeBinaryDeferred(
+            SseHttpRequest request,
+            CancellationSignal cancellation
+    ) {
+        if (closed.get()) {
+            return Uni.createFrom().failure(new IllegalStateException("Client is closed"));
+        }
+        try {
+            cancellation.throwIfCancelled();
+        } catch (Throwable failure) {
+            return Uni.createFrom().failure(failure);
+        }
+        RequestOptions requestOptions = new RequestOptions()
+                .setAbsoluteURI(request.uri().toASCIIString())
+                .setMethod(HttpMethod.valueOf(request.method()))
+                .setTimeout(options.requestTimeout().toMillis())
+                .setIdleTimeout(options.readIdleTimeout().toMillis());
+        request.headers().forEach(requestOptions::putHeader);
+        return uni(client.request(requestOptions))
+                .chain(outbound -> sendBinary(outbound, request, cancellation));
     }
 
     private Uni<SseHttpResponse> send(
@@ -135,6 +168,59 @@ public final class VertxSseHttpClient implements AutoCloseable {
                         cancellation,
                         cancellationRegistration
                 ));
+    }
+
+    private Uni<BinaryHttpResponse> sendBinary(
+            HttpClientRequest outbound,
+            SseHttpRequest request,
+            CancellationSignal cancellation
+    ) {
+        AtomicReference<AutoCloseable> registration = new AtomicReference<>();
+        try {
+            registration.set(cancellation.onCancel(outbound::cancel));
+        } catch (Throwable failure) {
+            outbound.reset();
+            return Uni.createFrom().failure(failure);
+        }
+        if (cancellation.isCancelled()) {
+            outbound.reset();
+            closeRegistration(registration);
+            return Uni.createFrom().failure(
+                    new CancellationException("HTTP request cancelled")
+            );
+        }
+        return uni(outbound.send(Buffer.buffer(request.body())))
+                .onCancellation().invoke(() -> {
+                    outbound.cancel();
+                    closeRegistration(registration);
+                })
+                .onFailure().invoke(ignored -> closeRegistration(registration))
+                .map(response -> mapBinaryResponse(
+                        response, outbound, cancellation, registration
+                ));
+    }
+
+    private BinaryHttpResponse mapBinaryResponse(
+            HttpClientResponse response,
+            HttpClientRequest request,
+            CancellationSignal cancellation,
+            AtomicReference<AutoCloseable> registration
+    ) {
+        Map<String, List<String>> headers = copyHeaders(response.headers());
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            request.cancel();
+            closeRegistration(registration);
+            throw new HttpResponseException(
+                    response.statusCode(), response.statusMessage(), headers
+            );
+        }
+        Multi<byte[]> chunks = buffers(
+                response, request, cancellation,
+                options.maxPendingResponseBuffers()
+        ).map(Buffer::getBytes)
+                .ifNoItem().after(options.readIdleTimeout()).fail()
+                .onTermination().invoke(() -> closeRegistration(registration));
+        return new BinaryHttpResponse(response.statusCode(), headers, chunks);
     }
 
     private SseHttpResponse mapResponse(

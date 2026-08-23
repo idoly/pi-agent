@@ -9,8 +9,8 @@ core (pi-agent-core)  -> ai (pi-agent-ai) <- vertx (pi-agent-vertx)
 The three Maven modules correspond to real publication boundaries:
 
 - `ai` publishes `pi-agent-ai` and contains framework-neutral model, message, tool, cancellation, and streaming contracts.
-- `core` publishes `pi-agent-core`, implements the stateful runtime, and depends only on the API plus validation libraries.
-- `vertx` publishes `pi-agent-vertx` and contains the Vert.x/Mutiny transport and provider implementation.
+- `core` publishes `pi-agent-core`, implements the stateful runtime, Agent Skills discovery, and native Java extension host, and depends only on the API plus validation libraries.
+- `vertx` publishes `pi-agent-vertx` and contains the Vert.x/Mutiny transport, SSE and Smithy event-stream framing, and all provider implementations.
 
 Published artifacts use Maven group `io.github.idoly`; Java packages use `io.github.idoly.pi.*`.
 
@@ -24,7 +24,7 @@ The Core consumes a `ModelStream`, represented as a JDK `Flow.Publisher<Assistan
 - Vert.x 5.1.6
 - SmallRye Mutiny 3.3.0
 
-Vert.x owns HTTP connection pooling, HTTP/2 multiplexing, TLS, request timeout, and stream reset. Mutiny owns asynchronous composition, single-subscriber buffering, demand, idle timeout, and cancellation propagation. Custom transport code is limited to SSE protocol parsing and mapping provider frames into runtime events.
+Vert.x owns HTTP connection pooling, HTTP/2 multiplexing, TLS, request timeout, and stream reset. Mutiny owns asynchronous composition, single-subscriber buffering, demand, idle timeout, and cancellation propagation. Transport parsing covers SSE and CRC-validated AWS Smithy event-stream frames; public binary chunks use `byte[]`, so Vert.x `Buffer` remains module-local.
 
 ## Concurrency contract
 
@@ -52,6 +52,8 @@ Two OpenAI-family protocols live in `vertx`. `OpenAiModelStream` routes both ove
 
 - OpenAI-compatible Chat Completions serializes messages, images, tools, and tool results and maps text, structured reasoning signatures, indexed tool-call deltas, cache-aware usage, response metadata, provider errors, finish reasons, and `[DONE]`.
 - OpenAI Responses serializes stateless input items and maps output text, reasoning, function calls, tool-result images, usage, completed/incomplete/error states, encrypted reasoning replay, and session cache affinity.
+
+`VertxModelProviders` adds native Anthropic Messages, Google AI Studio/Vertex generateContent, Mistral Conversations, and AWS Bedrock ConverseStream routing over the same pool. Anthropic preserves thinking signatures and incremental tool JSON; Google preserves thought signatures on text, thinking, and function calls; Mistral normalizes nine-character tool IDs and native thinking chunks; Bedrock uses bearer or SigV4 authentication and CRC-validates Smithy event-stream frames. `ProviderModelCatalog` contains 276 generated `0.84.2` models with pricing tiers. Runtime custom providers are parsed from structured `models.json` configuration and routed by API identifier.
 
 Provider-specific wire behavior is explicit in `OpenAiCompatibility` and `OpenAiResponsesCompatibility`. These immutable profiles control roles, token fields, reasoning formats, strict-tool support, session-affinity headers, and tool-call ID normalization without adding provider details to the Core `ModelStream` contract. Chat reasoning profiles cover standard OpenAI, Qwen, Qwen chat-template, zAI, DeepSeek, OpenRouter, Together, and string-thinking request formats.
 

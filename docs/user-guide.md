@@ -808,7 +808,138 @@ try {
 - 备份需求若要求全repository同时点，使用filesystem snapshot；当前checkpoint不提供该保证。
 - `AgentHarness`仍是上游`0.84.2` scaffold，durable session APIs是Java experimental extensions。
 
-## 19. 相关文档
+## 19. Java Extensions
+
+Extensions是纯Java headless SPI。Extension JAR通过`ServiceLoader`声明`AgentExtension`实现，不加载TypeScript：
+
+```java
+public final class SecurityExtension implements AgentExtension {
+    @Override
+    public String id() {
+        return "security";
+    }
+
+    @Override
+    public void configure(ExtensionApi api) {
+        api.onBeforeTool((call, arguments, messages, context) -> {
+            if (call.name().equals("bash")
+                    && String.valueOf(arguments.get("command")).contains("rm -rf")) {
+                return CompletableFuture.completedFuture(
+                        BeforeToolCallResult.block("Dangerous command")
+                );
+            }
+            return CompletableFuture.completedFuture(
+                    BeforeToolCallResult.allow()
+            );
+        });
+        api.registerTool(new AuditTool());
+    }
+}
+```
+
+JAR中添加：
+
+```text
+META-INF/services/io.github.idoly.pi.agent.extension.AgentExtension
+```
+
+内容为实现类全名。Host加载：
+
+```java
+ExtensionContext extensionContext = new ExtensionContext(
+        cwd, session, providers.registry(), CancellationSignal.NONE, Map.of()
+);
+ExtensionLoadOptions loadOptions = new ExtensionLoadOptions(
+        Path.of(System.getProperty("user.home")), cwd,
+        projectTrusted, true, List.of()
+);
+ExtensionLoader.LoadedRuntime loaded = ExtensionLoader.load(
+        extensionContext, loadOptions
+).toCompletableFuture().join();
+ExtensionAgent agent = loaded.runtime().createExtensionAgent(agentOptions);
+```
+
+默认发现`~/.pi/agent/extensions`；只有project trusted时才发现`.pi/extensions`。`reload()`会先执行session shutdown、关闭旧runtime/classloader，再重新发现JAR。Extension普通事件错误被隔离并记录到`failures()`；before-tool错误fail-safe block。
+
+## 20. Agent Skills
+
+```java
+SkillRegistry skills = SkillRegistry.discover(
+        new SkillDiscoveryOptions(
+                Path.of(System.getProperty("user.home")), cwd,
+                projectTrusted, true, List.of(), List.of()
+        )
+);
+String systemPrompt = skills.contributeToSystemPrompt(basePrompt);
+String invoked = skills.invoke("pdf-tools", "extract report.pdf");
+```
+
+支持：
+
+- `SKILL.md`和允许位置的root Markdown
+- Agent Skills frontmatter
+- Global/project/explicit/package scopes
+- `.agents/skills` ancestor discovery到Git root
+- Project trust gate
+- Missing description拒绝
+- 其他标准违规warning但继续加载
+- Name collision first-wins
+- `disable-model-invocation`
+- `allowed-tools`
+- XML progressive disclosure
+- Scripts、references和assets相对目录
+
+Skill可以包含可执行脚本，加载前仍需由host建立project trust。
+
+## 21. 多Provider
+
+推荐使用统一入口：
+
+```java
+try (VertxModelProviders providers = new VertxModelProviders()) {
+    Model model = providers.catalog()
+            .find("anthropic", "claude-sonnet-4-5")
+            .orElseThrow()
+            .model();
+    AgentOptions options = new AgentOptions(
+            "You are useful", model, providers
+    );
+}
+```
+
+支持的native协议：
+
+```text
+anthropic-messages
+openai-completions
+openai-responses
+azure-openai-responses
+openai-codex-responses
+mistral-conversations
+google-generative-ai
+google-vertex
+bedrock-converse-stream
+```
+
+Google Vertex接受API key或host提供的OAuth access token，并使用`GOOGLE_CLOUD_PROJECT`和`GOOGLE_CLOUD_LOCATION`展开catalog endpoint。Bedrock接受`AWS_BEARER_TOKEN_BEDROCK`，或使用`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`、`AWS_SESSION_TOKEN`执行SigV4。AWS profile文件和OAuth refresh-token持久化由host负责，不由SDK读取或保存。
+
+自定义Ollama/vLLM/LM Studio或代理可读取pi风格`models.json`：
+
+```java
+ProviderConfiguration configuration = ProviderConfiguration.read(
+        Path.of("models.json")
+);
+for (ProviderDefinition definition : configuration.providers()) {
+    providers.register(
+            definition,
+            ProviderConfiguration.environmentResolver()
+    );
+}
+```
+
+默认resolver支持`$ENV_VAR`、`${ENV_VAR}`、`$$`和`$!`。出于安全原因，`!command`必须通过应用显式提供的`ConfigValueResolver`执行。
+
+## 22. 相关文档
 
 - [架构](architecture.md)
 - [API稳定度](api-stability.md)

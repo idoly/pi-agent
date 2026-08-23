@@ -3,6 +3,7 @@ package io.github.idoly.pi.vertx.openai;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.idoly.pi.ai.Model;
+import io.github.idoly.pi.ai.ModelPricing;
 import io.github.idoly.pi.ai.ThinkingLevelMap;
 
 import java.io.IOException;
@@ -138,7 +139,8 @@ public final class OpenAiModelCatalog {
         ThinkingLevelMap thinkingLevelMap = parseThinkingLevelMap(node.path("thinkingLevelMap"), label);
         Model model = new Model(
                 id, name, api, provider, baseUrl, node.path("reasoning").asBoolean(),
-                input, contextWindow, maxTokens, thinkingLevelMap
+                input, contextWindow, maxTokens, thinkingLevelMap,
+                parsePricing(value.path("cost"))
         );
 
         JsonNode compat = value.path("compat");
@@ -167,6 +169,25 @@ public final class OpenAiModelCatalog {
                 true, strict, Boolean.TRUE.equals(capabilities.supportsGrammarTools())
         );
         return new Entry(model, completions, responses, capabilities);
+    }
+
+    private static ModelPricing parsePricing(JsonNode value) {
+        ArrayList<ModelPricing.Tier> tiers = new ArrayList<>();
+        for (JsonNode tier : value.path("tiers")) {
+            tiers.add(new ModelPricing.Tier(
+                    tier.path("inputTokensAbove").asLong(),
+                    tier.path("input").asDouble(),
+                    tier.path("output").asDouble(),
+                    tier.path("cacheRead").asDouble(),
+                    tier.path("cacheWrite").asDouble()
+            ));
+        }
+        return new ModelPricing(
+                value.path("input").asDouble(),
+                value.path("output").asDouble(),
+                value.path("cacheRead").asDouble(),
+                value.path("cacheWrite").asDouble(), tiers
+        );
     }
 
     private static ThinkingLevelMap parseThinkingLevelMap(JsonNode node, String label) {
@@ -240,8 +261,8 @@ public final class OpenAiModelCatalog {
             }
             return new Model(
                     model.id(), model.name(), model.api(), model.provider(), baseUrl,
-                    model.reasoning(), model.input(), model.contextWindow(), model.maxTokens(),
-                    model.thinkingLevelMap()
+                    model.reasoning(), model.input(), model.contextWindow(),
+                    model.maxTokens(), model.thinkingLevelMap(), model.pricing()
             );
         }
     }

@@ -13,7 +13,8 @@ public record Model(
         List<String> input,
         int contextWindow,
         int maxTokens,
-        ThinkingLevelMap thinkingLevelMap
+        ThinkingLevelMap thinkingLevelMap,
+        ModelPricing pricing
 ) {
     public Model(
             String id,
@@ -28,7 +29,25 @@ public record Model(
     ) {
         this(
                 id, name, api, provider, baseUrl, reasoning, input,
-                contextWindow, maxTokens, null
+                contextWindow, maxTokens, null, ModelPricing.ZERO
+        );
+    }
+
+    public Model(
+            String id,
+            String name,
+            String api,
+            String provider,
+            String baseUrl,
+            boolean reasoning,
+            List<String> input,
+            int contextWindow,
+            int maxTokens,
+            ThinkingLevelMap thinkingLevelMap
+    ) {
+        this(
+                id, name, api, provider, baseUrl, reasoning, input,
+                contextWindow, maxTokens, thinkingLevelMap, ModelPricing.ZERO
         );
     }
 
@@ -39,5 +58,6 @@ public record Model(
         Objects.requireNonNull(provider, "provider");
         Objects.requireNonNull(baseUrl, "baseUrl");
         input = List.copyOf(Objects.requireNonNull(input, "input"));
+        pricing = pricing == null ? ModelPricing.ZERO : pricing;
     }
 }

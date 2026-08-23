@@ -16,7 +16,7 @@ The build attaches binary, source, and Javadoc JARs for all three modules.
 
 ## SDK scope
 
-`pi-agent` targets headless JVM embedding. Planned extension support uses a native Java SPI for lifecycle hooks, tools, providers, commands exposed by a host, and durable extension state. Agent Skills remain file-format compatible with the Agent Skills standard. TypeScript extension loading and TUI-specific rendering are explicit non-goals.
+`pi-agent` targets headless JVM embedding. Native Java extensions support ordered lifecycle middleware, tools, providers, host commands, shared events, trusted JAR discovery, ServiceLoader registration, and classloader reload. Agent Skills support trust-aware discovery, Agent Skills frontmatter, lenient validation, progressive disclosure, and explicit invocation. TypeScript extension loading and TUI-specific rendering are explicit non-goals.
 
 ## Modules
 
@@ -42,7 +42,7 @@ The build attaches binary, source, and Javadoc JARs for all three modules.
 - Per-model thinking-level support, provider value mapping, and upstream-compatible clamping.
 - Preferred/required JSON Schema constrained sampling with strict-schema conversion and fallback.
 - OpenAI grammar/custom tools across declarations, history replay, streaming deltas, and Agent arguments.
-- Versioned OpenAI-family model catalog with per-model thinking and compatibility metadata.
+- Versioned 276-model catalog for OpenAI, Anthropic, Google AI Studio, Google Vertex, Amazon Bedrock, and Mistral with thinking, compatibility, and tiered pricing metadata.
 - Versioned in-memory session repository with immutable entry trees, lanes, facts, usage, forks, and compaction-aware context.
 - Durable operation records, record queries, open-operation indexing, and the behavior-compatible `AgentHarness` 0.84.2 scaffold.
 - JSONL v4 session persistence with shared-sequence replay, atomic create/fork/retained-copy publication, malformed-tail recovery, upstream-compatible structured codecs, cross-process writer and operation-execution leases, sequence-targeted, record-verified, change-driven polling/WatchService/external advisory abort notification with process-local fallback diagnostics and operation-level fan-out, abort-only settlement reconciliation, stale-sequence and generation fencing, retention-aware staging and unassociated-signal cleanup, durable per-generation recovery inventories with cursor/budget-paged drift verification, read-only maintenance and cursor/budget-paged bounded recovery reporting, and reopenable session lifecycle gates.
@@ -53,7 +53,7 @@ The build attaches binary, source, and Javadoc JARs for all three modules.
 - Vert.x 5.1.6 pooled HTTP/1.1 and HTTP/2 SSE transport with Mutiny streaming.
 - OpenAI-compatible Chat Completions request, text/tool-call stream, usage, and error codec.
 - OpenAI Responses request and stream codec with encrypted reasoning replay, tool-result images, cache affinity, terminal metadata, and composite tool-call IDs.
-- Unified OpenAI-family `ModelStream` routing over one shared Vert.x connection pool.
+- Unified `VertxModelProviders` routing for OpenAI Chat/Responses, Anthropic Messages, Google AI Studio/Vertex, Amazon Bedrock ConverseStream, and Mistral Conversations over one shared Vert.x connection pool.
 - OpenAI Chat/Responses response IDs, raw stop reasons, reasoning-token usage, and differential terminal-error behavior.
 - Structured Chat `reasoning_details` signature preservation and stateless replay.
 - Protection against executing tool arguments from a length-truncated assistant response.
@@ -71,6 +71,7 @@ node tools/generate-agent-core-fixtures.mjs compat-fixtures/agent-core-0.84.2.js
 node tools/generate-openai-responses-fixtures.mjs compat-fixtures/openai-responses-0.84.2.json
 node tools/generate-openai-chat-fixtures.mjs compat-fixtures/openai-chat-0.84.2.json
 node tools/generate-openai-model-catalog.mjs
+node tools/generate-provider-model-catalog.mjs
 node tools/generate-session-memory-fixtures.mjs
 node tools/generate-agent-harness-fixtures.mjs
 node tools/generate-session-jsonl-fixtures.mjs

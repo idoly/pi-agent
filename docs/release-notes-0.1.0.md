@@ -19,6 +19,8 @@ executable harness contract.
 
 ## Java extensions
 
+The headless SDK includes native Java extension lifecycle/tool/context/provider/command middleware, trusted JAR discovery and reload, and Agent Skills discovery with progressive disclosure. TypeScript loading and TUI rendering are intentionally excluded.
+
 Durable run, tool, queue, navigation, compaction, recovery, checkpoint,
 maintenance, remote abort, and cleanup APIs are Java session-level extensions.
 They use the upstream-compatible JSONL v4 mutation format but are marked or
@@ -33,8 +35,7 @@ simultaneous repository snapshot.
 
 Core exposes JDK `Flow.Publisher` streaming and has no Vert.x, Mutiny, or Netty
 runtime dependency. Vert.x 5.1.6 and SmallRye Mutiny 3.3.0 are isolated in
-`pi-agent-vertx`. OpenAI protocols use the Vert.x transport directly without
-the official OpenAI SDK, OkHttp, or Kotlin runtime.
+`pi-agent-vertx`. OpenAI, Anthropic, Google/Vertex, Mistral, and Bedrock protocols use the Vert.x transport directly without official provider SDKs, OkHttp, or Kotlin runtime. The bundled generated catalog contains 276 models.
 
 ## Requirements
 

@@ -120,13 +120,15 @@ final class SessionCopies {
 
     private static ContentBlock block(ContentBlock block) {
         return switch (block) {
-            case TextContent text -> new TextContent(text.text());
+            case TextContent text -> new TextContent(
+                    text.text(), text.signature()
+            );
             case ImageContent image -> new ImageContent(image.data(), image.mimeType());
             case ThinkingContent thinking -> new ThinkingContent(
                     thinking.thinking(), thinking.signature()
             );
             case ToolCallContent call -> new ToolCallContent(
-                    call.id(), call.name(), map(call.arguments())
+                    call.id(), call.name(), map(call.arguments()), call.signature()
             );
         };
     }
