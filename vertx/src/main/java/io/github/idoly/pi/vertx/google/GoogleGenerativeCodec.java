@@ -109,6 +109,7 @@ public final class GoogleGenerativeCodec {
 
     private ArrayNode encodeMessages(Model model, List<Message> messages) {
         ArrayNode contents = mapper.createArrayNode();
+        Map<String, String> toolIds = new LinkedHashMap<>();
         for (Message message : messages) {
             switch (message) {
                 case UserMessage user -> contents.addObject()
@@ -149,7 +150,10 @@ public final class GoogleGenerativeCodec {
                                         .put("name", call.name());
                                 function.set("args", mapper.valueToTree(call.arguments()));
                                 if (requiresToolId(model.id())) {
-                                    function.put("id", normalizeToolId(call.id()));
+                                    String id = same
+                                            ? call.id() : normalizeToolId(call.id());
+                                    toolIds.put(call.id(), id);
+                                    function.put("id", id);
                                 }
                                 if (same && validSignature(call.signature())) {
                                     part.put("thoughtSignature", call.signature());
@@ -168,7 +172,10 @@ public final class GoogleGenerativeCodec {
                     ObjectNode response = functionResponse.putObject("functionResponse")
                             .put("name", result.toolName());
                     if (requiresToolId(model.id())) {
-                        response.put("id", normalizeToolId(result.toolCallId()));
+                        response.put("id", toolIds.getOrDefault(
+                                result.toolCallId(),
+                                normalizeToolId(result.toolCallId())
+                        ));
                     }
                     String text = result.content().stream()
                             .filter(TextContent.class::isInstance)

@@ -39,7 +39,8 @@ class AnthropicMessagesCodecTest {
         );
         var request = codec.encodeRequest(model, context, "medium");
         assertEquals("model", request.path("model").asText());
-        assertEquals("system", request.path("system").asText());
+        assertEquals("system", request.path("system").get(0)
+                .path("text").asText());
         assertEquals("enabled", request.path("thinking").path("type").asText());
         assertEquals(8192, request.path("thinking").path("budget_tokens").asInt());
         assertEquals("signature", request.path("messages").get(1)

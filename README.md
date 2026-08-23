@@ -72,6 +72,7 @@ node tools/generate-openai-responses-fixtures.mjs compat-fixtures/openai-respons
 node tools/generate-openai-chat-fixtures.mjs compat-fixtures/openai-chat-0.84.2.json
 node tools/generate-openai-model-catalog.mjs
 node tools/generate-provider-model-catalog.mjs
+node tools/generate-provider-protocol-fixtures.mjs
 node tools/generate-session-memory-fixtures.mjs
 node tools/generate-agent-harness-fixtures.mjs
 node tools/generate-session-jsonl-fixtures.mjs

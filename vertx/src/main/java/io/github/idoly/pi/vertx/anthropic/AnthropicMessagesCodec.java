@@ -34,7 +34,11 @@ public final class AnthropicMessagesCodec {
                 .put("max_tokens", model.maxTokens())
                 .put("stream", true);
         if (!context.systemPrompt().isBlank()) {
-            request.put("system", context.systemPrompt());
+            request.putArray("system").addObject()
+                    .put("type", "text")
+                    .put("text", context.systemPrompt())
+                    .putObject("cache_control")
+                    .put("type", "ephemeral");
         }
         request.set("messages", encodeMessages(model, context.messages()));
         if (!context.tools().isEmpty()) {
@@ -42,8 +46,11 @@ public final class AnthropicMessagesCodec {
             for (ToolDefinition tool : context.tools()) {
                 ObjectNode encoded = tools.addObject()
                         .put("name", tool.name())
-                        .put("description", tool.description());
+                        .put("description", tool.description())
+                        .put("eager_input_streaming", true);
                 encoded.set("input_schema", mapper.valueToTree(tool.parameters()));
+                encoded.putObject("cache_control")
+                        .put("type", "ephemeral");
             }
         }
         if (model.reasoning() && thinkingLevel != null
@@ -61,7 +68,8 @@ public final class AnthropicMessagesCodec {
             };
             request.putObject("thinking")
                     .put("type", "enabled")
-                    .put("budget_tokens", budget);
+                    .put("budget_tokens", budget)
+                    .put("display", "summarized");
         }
         return request;
     }
@@ -143,6 +151,8 @@ public final class AnthropicMessagesCodec {
                             .put("tool_use_id", toolResult.toolCallId())
                             .put("is_error", toolResult.error());
                     block.set("content", encodeUserContent(toolResult.content()));
+                    block.putObject("cache_control")
+                            .put("type", "ephemeral");
                     result.addObject().put("role", "user")
                             .set("content", mapper.createArrayNode().add(block));
                 }
@@ -151,7 +161,18 @@ public final class AnthropicMessagesCodec {
         return result;
     }
 
-    private ArrayNode encodeUserContent(List<ContentBlock> blocks) {
+    private JsonNode encodeUserContent(List<ContentBlock> blocks) {
+        boolean textOnly = blocks.stream().allMatch(block ->
+                block instanceof TextContent || block instanceof ThinkingContent
+        );
+        if (textOnly) {
+            String text = blocks.stream().map(block -> switch (block) {
+                case TextContent value -> value.text();
+                case ThinkingContent value -> value.thinking();
+                default -> "";
+            }).reduce((left, right) -> left + "\n" + right).orElse("");
+            return mapper.getNodeFactory().textNode(text);
+        }
         ArrayNode result = mapper.createArrayNode();
         for (ContentBlock block : blocks) {
             switch (block) {

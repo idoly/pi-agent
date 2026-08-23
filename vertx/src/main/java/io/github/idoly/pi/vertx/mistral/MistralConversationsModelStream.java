@@ -1,8 +1,8 @@
 package io.github.idoly.pi.vertx.mistral;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.idoly.pi.ai.*;
 import io.github.idoly.pi.vertx.SseHttpRequest;
@@ -11,9 +11,6 @@ import io.github.idoly.pi.vertx.openai.OpenAiChatCodec;
 import io.smallrye.mutiny.Multi;
 
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -75,21 +72,7 @@ public final class MistralConversationsModelStream
                     "No API key for provider: " + model.provider()
             ));
         }
-        ObjectNode request = codec.encodeRequest(
-                model, context, options.thinkingLevel()
-        );
-        normalizeToolIds(request);
-        if (model.reasoning() && options.thinkingLevel() != null
-                && !options.thinkingLevel().equals("off")) {
-            if (model.id().startsWith("magistral")) {
-                request.put("prompt_mode", "reasoning");
-            } else {
-                request.put("reasoning_effort", "high");
-            }
-        }
-        if (options.sessionId() != null && !options.sessionId().isBlank()) {
-            request.put("prompt_cache_key", options.sessionId());
-        }
+        ObjectNode request = encodeRequest(model, context, options);
         Map<String, String> headers = new LinkedHashMap<>(options.headers());
         headers.put("content-type", "application/json");
         headers.put("accept", "text/event-stream");
@@ -111,49 +94,228 @@ public final class MistralConversationsModelStream
         );
     }
 
-    private void normalizeToolIds(ObjectNode request) {
-        Map<String, String> ids = new LinkedHashMap<>();
-        JsonNode messages = request.path("messages");
-        if (!messages.isArray()) return;
-        for (JsonNode message : messages) {
-            JsonNode calls = message.path("tool_calls");
-            if (calls.isArray()) {
-                for (JsonNode call : calls) {
-                    if (!(call instanceof ObjectNode object)) continue;
-                    String id = object.path("id").asText();
-                    object.put("id", ids.computeIfAbsent(
-                            id, MistralConversationsModelStream::toolId
-                    ));
-                }
-            }
-            if (message instanceof ObjectNode object
-                    && object.path("tool_call_id").isTextual()) {
-                String id = object.path("tool_call_id").asText();
-                object.put("tool_call_id", ids.computeIfAbsent(
-                        id, MistralConversationsModelStream::toolId
-                ));
+    ObjectNode encodeRequest(
+            Model model, ModelContext context, StreamOptions options
+    ) {
+        ObjectNode request = mapper.createObjectNode()
+                .put("model", model.id())
+                .put("stream", true);
+        ArrayNode messages = request.putArray("messages");
+        if (!context.systemPrompt().isBlank()) {
+            messages.addObject().put("role", "system")
+                    .put("content", context.systemPrompt());
+        }
+        Map<String, String> toolIds = new LinkedHashMap<>();
+        for (Message message : context.messages()) {
+            switch (message) {
+                case UserMessage user -> encodeUserMessage(
+                        messages, user, model.input().contains("image")
+                );
+                case AssistantMessage assistant -> encodeAssistantMessage(
+                        messages, assistant, model, toolIds
+                );
+                case ToolResultMessage result -> encodeToolResult(
+                        messages, result, model.input().contains("image"),
+                        toolIds
+                );
             }
         }
+        if (!context.tools().isEmpty()) {
+            ArrayNode tools = request.putArray("tools");
+            for (ToolDefinition tool : context.tools()) {
+                ObjectNode function = tools.addObject()
+                        .put("type", "function")
+                        .putObject("function")
+                        .put("name", tool.name())
+                        .put("description", tool.description());
+                function.set(
+                        "parameters", mapper.valueToTree(tool.parameters())
+                );
+                function.put("strict", false);
+            }
+        }
+        request.put("max_tokens", model.maxTokens());
+        if (model.reasoning() && options.thinkingLevel() != null
+                && !options.thinkingLevel().equals("off")) {
+            if (usesReasoningEffort(model.id())) {
+                request.put("reasoning_effort", "high");
+            } else {
+                request.put("prompt_mode", "reasoning");
+            }
+        }
+        if (options.sessionId() != null && !options.sessionId().isBlank()) {
+            request.put("prompt_cache_key", options.sessionId());
+        }
+        return request;
+    }
+
+    private void encodeUserMessage(
+            ArrayNode messages, UserMessage user, boolean supportsImages
+    ) {
+        boolean textOnly = user.content().stream()
+                .allMatch(TextContent.class::isInstance);
+        if (textOnly) {
+            String text = user.content().stream()
+                    .map(TextContent.class::cast)
+                    .map(TextContent::text)
+                    .reduce((left, right) -> left + "\n" + right)
+                    .orElse("");
+            messages.addObject().put("role", "user").put("content", text);
+            return;
+        }
+        ArrayNode content = mapper.createArrayNode();
+        boolean hadImages = false;
+        for (ContentBlock block : user.content()) {
+            if (block instanceof TextContent text) {
+                content.addObject().put("type", "text")
+                        .put("text", text.text());
+            } else if (block instanceof ImageContent image) {
+                hadImages = true;
+                if (supportsImages) {
+                    content.addObject().put("type", "image_url")
+                            .put("image_url", "data:" + image.mimeType()
+                                    + ";base64," + image.data());
+                }
+            }
+        }
+        if (!content.isEmpty()) {
+            messages.addObject().put("role", "user").set("content", content);
+        } else if (hadImages) {
+            messages.addObject().put("role", "user")
+                    .put("content", "(image omitted: model does not support images)");
+        }
+    }
+
+    private void encodeAssistantMessage(
+            ArrayNode messages, AssistantMessage assistant, Model model,
+            Map<String, String> toolIds
+    ) {
+        ArrayNode content = mapper.createArrayNode();
+        ArrayNode calls = mapper.createArrayNode();
+        boolean same = assistant.provider().equals(model.provider())
+                && assistant.model().equals(model.id());
+        for (ContentBlock block : assistant.content()) {
+            switch (block) {
+                case TextContent text -> {
+                    if (!text.text().isBlank()) {
+                        content.addObject().put("type", "text")
+                                .put("text", text.text());
+                    }
+                }
+                case ThinkingContent thinking -> {
+                    if (!thinking.thinking().isBlank()) {
+                        content.addObject().put("type", "thinking")
+                                .putArray("thinking").addObject()
+                                .put("type", "text")
+                                .put("text", thinking.thinking());
+                    }
+                }
+                case ToolCallContent call -> {
+                    String id = same ? call.id() : toolId(call.id());
+                    toolIds.put(call.id(), id);
+                    ObjectNode encoded = calls.addObject()
+                            .put("id", id)
+                            .put("type", "function");
+                    encoded.putObject("function")
+                            .put("name", call.name())
+                            .put("arguments", json(call.arguments()));
+                    encoded.put("index", 0);
+                }
+                case ImageContent ignored -> {
+                }
+            }
+        }
+        if (content.isEmpty() && calls.isEmpty()) return;
+        ObjectNode encoded = messages.addObject()
+                .put("role", "assistant")
+                .put("prefix", false);
+        if (!content.isEmpty()) encoded.set("content", content);
+        if (!calls.isEmpty()) encoded.set("tool_calls", calls);
+    }
+
+    private void encodeToolResult(
+            ArrayNode messages, ToolResultMessage result,
+            boolean supportsImages, Map<String, String> toolIds
+    ) {
+        ArrayNode content = mapper.createArrayNode();
+        String text = result.content().stream()
+                .filter(TextContent.class::isInstance)
+                .map(TextContent.class::cast)
+                .map(TextContent::text)
+                .reduce((left, right) -> left + "\n" + right)
+                .orElse("").trim();
+        boolean hasImages = result.content().stream()
+                .anyMatch(ImageContent.class::isInstance);
+        String rendered;
+        if (!text.isEmpty()) {
+            rendered = (result.error() ? "[tool error] " : "") + text
+                    + (hasImages && !supportsImages
+                    ? "\n[tool image omitted: model does not support images]" : "");
+        } else if (hasImages) {
+            rendered = result.error()
+                    ? "[tool error] (see attached image)"
+                    : "(see attached image)";
+            if (!supportsImages) {
+                rendered = result.error()
+                        ? "[tool error] (image omitted: model does not support images)"
+                        : "(image omitted: model does not support images)";
+            }
+        } else {
+            rendered = result.error()
+                    ? "[tool error] (no tool output)" : "(no tool output)";
+        }
+        content.addObject().put("type", "text").put("text", rendered);
+        if (supportsImages) {
+            for (ContentBlock block : result.content()) {
+                if (block instanceof ImageContent image) {
+                    content.addObject().put("type", "image_url")
+                            .put("image_url", "data:" + image.mimeType()
+                                    + ";base64," + image.data());
+                }
+            }
+        }
+        messages.addObject().put("role", "tool")
+                .put("name", result.toolName())
+                .set("content", content);
+        ((ObjectNode) messages.get(messages.size() - 1)).put(
+                "tool_call_id", toolIds.getOrDefault(
+                        result.toolCallId(), toolId(result.toolCallId())
+                )
+        );
+    }
+
+    private String json(Map<String, Object> value) {
+        try {
+            return mapper.writeValueAsString(value);
+        } catch (JsonProcessingException failure) {
+            throw new IllegalArgumentException("Invalid tool arguments", failure);
+        }
+    }
+
+    private static boolean usesReasoningEffort(String modelId) {
+        return modelId.equals("mistral-small-2603")
+                || modelId.equals("mistral-small-latest")
+                || modelId.equals("mistral-medium-3.5");
     }
 
     static String toolId(String input) {
         String normalized = input.replaceAll("[^A-Za-z0-9]", "");
         if (normalized.length() == 9) return normalized;
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(
-                    input.getBytes(StandardCharsets.UTF_8)
-            );
-            String alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-            StringBuilder value = new StringBuilder(9);
-            for (int index = 0; index < 9; index++) {
-                value.append(alphabet.charAt(
-                        Byte.toUnsignedInt(digest[index]) % alphabet.length()
-                ));
-            }
-            return value.toString();
-        } catch (NoSuchAlgorithmException failure) {
-            throw new IllegalStateException(failure);
+        String seed = normalized.isEmpty() ? input : normalized;
+        int h1 = 0xdeadbeef;
+        int h2 = 0x41c6ce57;
+        for (int index = 0; index < seed.length(); index++) {
+            int character = seed.charAt(index);
+            h1 = (h1 ^ character) * (int) 2_654_435_761L;
+            h2 = (h2 ^ character) * 1_597_334_677;
         }
+        h1 = ((h1 ^ (h1 >>> 16)) * (int) 2_246_822_507L)
+                ^ ((h2 ^ (h2 >>> 13)) * (int) 3_266_489_909L);
+        h2 = ((h2 ^ (h2 >>> 16)) * (int) 2_246_822_507L)
+                ^ ((h1 ^ (h1 >>> 13)) * (int) 3_266_489_909L);
+        String hash = Long.toString(Integer.toUnsignedLong(h2), 36)
+                + Long.toString(Integer.toUnsignedLong(h1), 36);
+        return hash.substring(0, 9);
     }
 
     static URI uri(String baseUrl) {

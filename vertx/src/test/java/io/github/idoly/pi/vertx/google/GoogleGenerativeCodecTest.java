@@ -53,11 +53,38 @@ class GoogleGenerativeCodecTest {
                 .path("thinkingConfig").path("thinkingLevel").asText());
         assertEquals("c2ln", request.path("contents").get(1)
                 .path("parts").get(0).path("thoughtSignature").asText());
-        assertEquals("call_id", request.path("contents").get(1)
+        assertEquals("call.id", request.path("contents").get(1)
                 .path("parts").get(2).path("functionCall").path("id").asText());
         assertEquals("object", request.path("tools").get(0)
                 .path("functionDeclarations").get(0)
                 .path("parametersJsonSchema").path("type").asText());
+    }
+
+    @Test
+    void normalizesForeignToolIdsAndReusesThemForResults() {
+        Model model = model("google-generative-ai");
+        AssistantMessage foreign = new AssistantMessage(
+                List.of(new ToolCallContent(
+                        "call.foreign/id", "lookup", Map.of()
+                )), "openai-responses", "openai", "other",
+                Usage.ZERO, StopReason.TOOL_USE, null, 1
+        );
+        ModelContext context = new ModelContext(
+                "", List.of(
+                        foreign,
+                        new ToolResultMessage(
+                                "call.foreign/id", "lookup",
+                                List.of(new TextContent("result")),
+                                Map.of(), null, false, 2
+                        )
+                ), List.of()
+        );
+        var contents = codec.encodeRequest(model, context, "off")
+                .path("contents");
+        assertEquals("call_foreign_id", contents.get(0).path("parts").get(0)
+                .path("functionCall").path("id").asText());
+        assertEquals("call_foreign_id", contents.get(1).path("parts").get(0)
+                .path("functionResponse").path("id").asText());
     }
 
     @Test

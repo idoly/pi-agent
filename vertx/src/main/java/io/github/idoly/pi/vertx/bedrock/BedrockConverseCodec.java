@@ -55,12 +55,20 @@ public final class BedrockConverseCodec {
                 case "medium" -> 8_192;
                 default -> 32_768;
             };
-            request.putObject("additionalModelRequestFields")
-                    .putObject("thinking")
+            ObjectNode additional = request.putObject(
+                    "additionalModelRequestFields"
+            );
+            additional.putObject("thinking")
                     .put("type", "enabled")
                     .put("budget_tokens", Math.min(
                             budget, Math.max(1, model.maxTokens() - 1_024)
-                    ));
+                    ))
+                    .put("display", "summarized");
+            if (model.id().toLowerCase().contains("anthropic")
+                    || model.id().toLowerCase().contains("claude")) {
+                additional.putArray("anthropic_beta")
+                        .add("interleaved-thinking-2025-05-14");
+            }
         }
         return request;
     }

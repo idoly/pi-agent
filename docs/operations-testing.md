@@ -39,6 +39,7 @@ cross-machine comparisons invalid.
 | Bounded recovery | 128 generations cross scan and detail page boundaries without count duplication. |
 | Verifier interruption | Persisted dual-cursor state resumes without recounting; completed state is terminal. |
 | Manifest corruption/path traversal | Structured decoder validates version, root ownership, unique paths, size, hash, and normalized containment. |
+| Provider protocol compatibility | The pinned TypeScript 0.84.2 Anthropic, Google, Mistral, and Bedrock implementations run against deterministic mock transports to generate semantic requests, final wire payloads, frames, events, and terminal messages. Java codecs compare against the resulting versioned fixture. |
 
 Disk-full and permission-denied behavior is expressed as `SessionError.Code.STORAGE`
 by the same persistence-before-publication paths, but deterministic tests for
