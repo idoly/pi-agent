@@ -3,6 +3,7 @@ package io.github.idoly.pi.vertx.anthropic;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.idoly.pi.ai.*;
+import io.github.idoly.pi.vertx.internal.ProviderHeaders;
 import io.github.idoly.pi.vertx.internal.ProviderHttpHooks;
 import io.github.idoly.pi.vertx.SseHttpRequest;
 import io.github.idoly.pi.vertx.VertxSseHttpClient;
@@ -73,7 +74,7 @@ public final class AnthropicMessagesModelStream
                     "No API key for provider: " + model.provider()
             ));
         }
-        Map<String, String> headers = new LinkedHashMap<>(options.headers());
+        Map<String, String> headers = new LinkedHashMap<>();
         headers.put("content-type", "application/json");
         headers.put("accept", "text/event-stream");
         String authToken = System.getenv("ANTHROPIC_AUTH_TOKEN");
@@ -91,6 +92,7 @@ public final class AnthropicMessagesModelStream
                     "anthropic-beta", "interleaved-thinking-2025-05-14"
             );
         }
+        headers = ProviderHeaders.merge(headers, options.headers());
         return ProviderHttpHooks.prepare(
                 mapper, model,
                 codec.encodeRequest(model, context, options.thinkingLevel()),

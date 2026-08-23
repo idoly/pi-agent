@@ -3,6 +3,7 @@ package io.github.idoly.pi.vertx.google;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.idoly.pi.ai.*;
+import io.github.idoly.pi.vertx.internal.ProviderHeaders;
 import io.github.idoly.pi.vertx.internal.ProviderHttpHooks;
 import io.github.idoly.pi.vertx.SseHttpRequest;
 import io.github.idoly.pi.vertx.VertxSseHttpClient;
@@ -99,20 +100,21 @@ public final class GoogleGenerativeModelStream
             Model model,
             StreamOptions options
     ) {
-        LinkedHashMap<String, String> headers =
-                new LinkedHashMap<>(options.headers());
-        headers.put("content-type", "application/json");
-        headers.put("accept", "text/event-stream");
+        LinkedHashMap<String, String> defaults = new LinkedHashMap<>();
+        defaults.put("content-type", "application/json");
+        defaults.put("accept", "text/event-stream");
         String credential = options.apiKey() == null
                 ? null : options.apiKey().trim();
-        String suppliedAuthorization = headers.entrySet().stream()
+        String suppliedAuthorization = options.headers().entrySet().stream()
                 .filter(entry -> entry.getKey().equalsIgnoreCase("authorization"))
                 .map(Map.Entry::getValue)
                 .filter(value -> value != null && !value.isBlank())
                 .findFirst().orElse(null);
         if (model.api().equals("google-vertex")
                 && suppliedAuthorization != null) {
-            return Map.copyOf(headers);
+            return Map.copyOf(ProviderHeaders.merge(
+                    defaults, options.headers()
+            ));
         }
         if (credential == null || credential.isBlank()) {
             throw new IllegalArgumentException(
@@ -125,15 +127,15 @@ public final class GoogleGenerativeModelStream
             String token = credential.substring(
                     credential.indexOf(' ') + 1
             ).trim();
-            headers.put("authorization", "Bearer " + token);
+            defaults.put("authorization", "Bearer " + token);
         } else if (model.api().equals("google-vertex")
                 && (credential.startsWith("ya29.")
                 || credential.startsWith("eyJ"))) {
-            headers.put("authorization", "Bearer " + credential);
+            defaults.put("authorization", "Bearer " + credential);
         } else {
-            headers.put("x-goog-api-key", credential);
+            defaults.put("x-goog-api-key", credential);
         }
-        return Map.copyOf(headers);
+        return Map.copyOf(ProviderHeaders.merge(defaults, options.headers()));
     }
 
     private static boolean isBearerCredential(String value) {

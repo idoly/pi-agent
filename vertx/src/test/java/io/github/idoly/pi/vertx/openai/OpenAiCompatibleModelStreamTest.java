@@ -48,6 +48,7 @@ class OpenAiCompatibleModelStreamTest {
     private final ObjectMapper mapper = new ObjectMapper();
     private final AtomicReference<String> path = new AtomicReference<>();
     private final AtomicReference<String> authorization = new AtomicReference<>();
+    private final AtomicReference<String> requestContentType = new AtomicReference<>();
     private final AtomicReference<String> requestHookHeader =
             new AtomicReference<>();
     private final AtomicReference<JsonNode> requestBody = new AtomicReference<>();
@@ -63,6 +64,7 @@ class OpenAiCompatibleModelStreamTest {
         server = vertx.createHttpServer().requestHandler(request -> request.body().onSuccess(body -> {
             path.set(request.path());
             authorization.set(request.getHeader("authorization"));
+            requestContentType.set(request.getHeader("content-type"));
             requestHookHeader.set(request.getHeader("x-request-hook"));
             try {
                 requestBody.set(mapper.readTree(body.getBytes()));
@@ -145,6 +147,35 @@ class OpenAiCompatibleModelStreamTest {
         assertEquals(5, doneEvent.message().usage().input());
         assertEquals(2, doneEvent.message().usage().output());
         assertEquals(7, doneEvent.message().usage().totalTokens());
+    }
+
+    @Test
+    void requestHeadersOverrideDefaultsCaseInsensitively() {
+        Model model = new Model(
+                "fixture-model", "Fixture", "openai-completions", "local",
+                baseUrl, false, List.of("text"), 8_192, 1_024
+        );
+        StreamOptions options = new StreamOptions(
+                "session", "generated-key", "off", CancellationSignal.NONE,
+                Map.of(
+                        "Authorization", "Proxy opaque-token",
+                        "Content-Type", "application/vnd.fixture+json"
+                )
+        );
+
+        List<AssistantStreamEvent> events = Multi.createFrom().publisher(
+                modelStream.stream(
+                        model,
+                        new ModelContext("", List.of(
+                                UserMessage.text("hello", 1)
+                        )),
+                        options
+                )
+        ).collect().asList().await().atMost(Duration.ofSeconds(3));
+
+        assertEquals("Proxy opaque-token", authorization.get());
+        assertEquals("application/vnd.fixture+json", requestContentType.get());
+        assertInstanceOf(AssistantStreamEvent.Done.class, events.getLast());
     }
 
     @Test

@@ -934,7 +934,7 @@ api.onProviderResponse((model, status, headers, context) ->
 );
 ```
 
-Header和payload hooks在HTTP请求前按extension顺序await；response hooks在开始消费SSE或Bedrock binary stream前await；非2xx响应也会先通知hook，再保留原`HttpResponseException`。普通extension hook异常记录到`runtime.failures()`并保留当前headers/payload。Bedrock SigV4在header/payload hooks完成后计算；SigV4路径会忽略extension提供的`authorization`、`host`和`x-amz-*`字段，再生成一致签名。
+Header和payload hooks在HTTP请求前按extension顺序await；response hooks在开始消费SSE或Bedrock binary stream前await；非2xx响应也会先通知hook，再保留原`HttpResponseException`。Header按HTTP大小写无关语义合并，统一优先级为provider defaults、`StreamOptions.headers()` request overrides、hook result；后层替换前层时不会保留大小写不同的重复header。普通extension hook异常记录到`runtime.failures()`并保留当前headers/payload。Bedrock SigV4在header/payload hooks完成后计算；SigV4路径会忽略request和extension提供的`authorization`、`host`和`x-amz-*`字段，再生成一致签名。
 
 Durable extension state复用session custom entries，JSONL仍是唯一authority：
 

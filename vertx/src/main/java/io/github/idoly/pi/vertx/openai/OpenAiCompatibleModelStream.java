@@ -8,6 +8,7 @@ import io.github.idoly.pi.ai.Model;
 import io.github.idoly.pi.ai.ModelContext;
 import io.github.idoly.pi.ai.ModelStream;
 import io.github.idoly.pi.ai.StreamOptions;
+import io.github.idoly.pi.vertx.internal.ProviderHeaders;
 import io.github.idoly.pi.vertx.internal.ProviderHttpHooks;
 import io.github.idoly.pi.vertx.SseHttpRequest;
 import io.github.idoly.pi.vertx.VertxSseHttpClient;
@@ -69,11 +70,12 @@ public final class OpenAiCompatibleModelStream implements ModelStream, AutoClose
         Objects.requireNonNull(model, "model");
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(options, "options");
-        Map<String, String> headers = new LinkedHashMap<>(options.headers());
+        Map<String, String> headers = new LinkedHashMap<>();
         headers.put("content-type", "application/json");
         if (options.apiKey() != null && !options.apiKey().isBlank()) {
             headers.put("authorization", "Bearer " + options.apiKey());
         }
+        headers = ProviderHeaders.merge(headers, options.headers());
         Map<String, OpenAiGrammar.Grammar> grammars = OpenAiGrammar.resolveAll(
                 mapper, context.tools(), compatibility.supportsGrammarTools()
         );

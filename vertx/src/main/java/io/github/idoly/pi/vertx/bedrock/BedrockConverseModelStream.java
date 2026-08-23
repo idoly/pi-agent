@@ -3,6 +3,7 @@ package io.github.idoly.pi.vertx.bedrock;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.idoly.pi.ai.*;
+import io.github.idoly.pi.vertx.internal.ProviderHeaders;
 import io.github.idoly.pi.vertx.internal.ProviderHttpHooks;
 import io.github.idoly.pi.vertx.SseHttpRequest;
 import io.github.idoly.pi.vertx.VertxSseHttpClient;
@@ -96,16 +97,20 @@ public final class BedrockConverseModelStream
             ));
         }
         URI uri = uri(model);
-        LinkedHashMap<String, String> headers = new LinkedHashMap<>();
+        LinkedHashMap<String, String> defaults = new LinkedHashMap<>();
+        defaults.put("content-type", "application/json");
+        defaults.put("accept", "application/vnd.amazon.eventstream");
+        LinkedHashMap<String, String> overrides = new LinkedHashMap<>();
         options.headers().forEach((name, value) -> {
             String lower = name.toLowerCase(java.util.Locale.ROOT);
             if (!lower.equals("authorization") && !lower.equals("host")
                     && !lower.startsWith("x-amz-")) {
-                headers.put(name, value);
+                overrides.put(name, value);
             }
         });
-        headers.put("content-type", "application/json");
-        headers.put("accept", "application/vnd.amazon.eventstream");
+        LinkedHashMap<String, String> headers = ProviderHeaders.merge(
+                defaults, overrides
+        );
         String bearer = options.apiKey();
         if (bearer == null || bearer.isBlank()) {
             bearer = System.getenv("AWS_BEARER_TOKEN_BEDROCK");

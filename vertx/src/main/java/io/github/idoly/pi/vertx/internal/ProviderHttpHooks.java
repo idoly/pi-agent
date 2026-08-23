@@ -30,7 +30,8 @@ public final class ProviderHttpHooks {
         Object value = mapper.convertValue(payload, Object.class);
         return Uni.createFrom().completionStage(() ->
                 options.requestHooks().beforeHeaders(
-                        model, Map.copyOf(headers), options.cancellation()
+                        model, Map.copyOf(ProviderHeaders.merge(headers)),
+                        options.cancellation()
                 )
         ).chain(updatedHeaders -> Uni.createFrom().completionStage(() ->
                 options.requestHooks().beforeRequest(
@@ -43,7 +44,9 @@ public final class ProviderHttpHooks {
                         "Provider request hook must return a JSON object"
                 );
             }
-            return new Prepared(object, Map.copyOf(updatedHeaders));
+            return new Prepared(
+                    object, Map.copyOf(ProviderHeaders.merge(updatedHeaders))
+            );
         }));
     }
 

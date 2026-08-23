@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.idoly.pi.ai.*;
+import io.github.idoly.pi.vertx.internal.ProviderHeaders;
 import io.github.idoly.pi.vertx.internal.ProviderHttpHooks;
 import io.github.idoly.pi.vertx.SseHttpRequest;
 import io.github.idoly.pi.vertx.VertxSseHttpClient;
@@ -74,13 +75,14 @@ public final class MistralConversationsModelStream
             ));
         }
         ObjectNode request = encodeRequest(model, context, options);
-        Map<String, String> headers = new LinkedHashMap<>(options.headers());
+        Map<String, String> headers = new LinkedHashMap<>();
         headers.put("content-type", "application/json");
         headers.put("accept", "text/event-stream");
         headers.put("authorization", "Bearer " + options.apiKey());
         if (options.sessionId() != null && !options.sessionId().isBlank()) {
             headers.put("x-affinity", options.sessionId());
         }
+        headers = ProviderHeaders.merge(headers, options.headers());
         return ProviderHttpHooks.prepare(
                 mapper, model, request, headers, options
         ).toMulti().onItem().transformToMultiAndConcatenate(prepared -> {
