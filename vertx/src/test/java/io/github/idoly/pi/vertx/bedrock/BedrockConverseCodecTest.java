@@ -96,6 +96,36 @@ class BedrockConverseCodecTest {
     }
 
     @Test
+    void ignoresSmithyEventsAfterEitherTerminalEvent() {
+        List<AssistantStreamEvent> afterError = codec.decode(
+                Multi.createFrom().item(concat(
+                        frame(
+                                "exception", "throttlingException",
+                                "{\"message\":\"slow down\"}"
+                        ),
+                        frame("messageStart", "not-json-after-terminal")
+                )), model()
+        ).collect().asList().await().indefinitely();
+        assertEquals(1, afterError.size());
+        assertInstanceOf(AssistantStreamEvent.Error.class, afterError.getLast());
+
+        List<AssistantStreamEvent> afterDone = codec.decode(
+                Multi.createFrom().item(concat(
+                        frame("messageStart", "{\"role\":\"assistant\"}"),
+                        frame("messageStop", "{\"stopReason\":\"end_turn\"}"),
+                        frame("metadata", "{\"usage\":{}}"),
+                        frame(
+                                "exception", "validationException",
+                                "{\"message\":\"late error\"}"
+                        )
+                )), model()
+        ).collect().asList().await().indefinitely();
+        assertEquals(2, afterDone.size());
+        assertInstanceOf(AssistantStreamEvent.Start.class, afterDone.getFirst());
+        assertInstanceOf(AssistantStreamEvent.Done.class, afterDone.getLast());
+    }
+
+    @Test
     void eventBinaryValuesAreDeeplyImmutable() {
         byte[] header = {1, 2, 3};
         byte[] payload = {4, 5, 6};

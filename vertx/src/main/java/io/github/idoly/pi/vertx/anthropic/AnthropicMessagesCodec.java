@@ -250,6 +250,7 @@ public final class AnthropicMessagesCodec {
         private String responseId;
         private String rawStopReason;
         private boolean started;
+        private boolean terminal;
 
         private State(Model model, ObjectMapper mapper) {
             this.model = model;
@@ -257,7 +258,9 @@ public final class AnthropicMessagesCodec {
         }
 
         private List<AssistantStreamEvent> accept(SseEvent event) {
-            if (event.data() == null || event.data().isBlank()) return List.of();
+            if (terminal || event.data() == null || event.data().isBlank()) {
+                return List.of();
+            }
             JsonNode value;
             try {
                 value = mapper.readTree(event.data());
@@ -269,19 +272,25 @@ public final class AnthropicMessagesCodec {
             String type = value.path("type").asText(event.event());
             return switch (type) {
                 case "ping" -> List.of();
-                case "error" -> List.of(new AssistantStreamEvent.Error(
-                        error(event.data())
-                ));
+                case "error" -> terminalError(event.data());
                 case "message_start" -> messageStart(value);
                 case "content_block_start" -> contentStart(value);
                 case "content_block_delta" -> contentDelta(value);
                 case "content_block_stop" -> contentStop(value);
                 case "message_delta" -> messageDelta(value);
-                case "message_stop" -> List.of(
-                        new AssistantStreamEvent.Done(snapshot())
-                );
+                case "message_stop" -> terminalDone();
                 default -> List.of();
             };
+        }
+
+        private List<AssistantStreamEvent> terminalError(String message) {
+            terminal = true;
+            return List.of(new AssistantStreamEvent.Error(error(message)));
+        }
+
+        private List<AssistantStreamEvent> terminalDone() {
+            terminal = true;
+            return List.of(new AssistantStreamEvent.Done(snapshot()));
         }
 
         private List<AssistantStreamEvent> messageStart(JsonNode value) {

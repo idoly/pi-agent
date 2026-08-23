@@ -218,6 +218,7 @@ public final class BedrockConverseCodec {
         }
 
         private List<AssistantStreamEvent> accept(AwsEventStreamDecoder.Event event) {
+            if (terminal) return List.of();
             String messageType = event.header(":message-type");
             String eventType = event.header(":event-type");
             JsonNode value;

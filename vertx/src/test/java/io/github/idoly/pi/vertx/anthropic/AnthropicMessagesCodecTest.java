@@ -116,6 +116,33 @@ class AnthropicMessagesCodecTest {
     }
 
     @Test
+    void ignoresFramesAfterEitherTerminalEvent() {
+        List<AssistantStreamEvent> afterError = codec.decode(
+                Multi.createFrom().items(
+                        event("error", "{\"type\":\"error\",\"error\":{}}"),
+                        event("message_stop", "{\"type\":\"message_stop\"}")
+                ), model()
+        ).collect().asList().await().indefinitely();
+        assertEquals(2, afterError.size());
+        assertInstanceOf(AssistantStreamEvent.Error.class, afterError.getLast());
+
+        List<AssistantStreamEvent> afterDone = codec.decode(
+                Multi.createFrom().items(
+                        event("message_start", """
+                                {"type":"message_start","message":{"id":"msg","usage":{}}}
+                                """),
+                        event("message_delta", """
+                                {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{}}
+                                """),
+                        event("message_stop", "{\"type\":\"message_stop\"}"),
+                        event("error", "not-json-after-terminal")
+                ), model()
+        ).collect().asList().await().indefinitely();
+        assertEquals(2, afterDone.size());
+        assertInstanceOf(AssistantStreamEvent.Done.class, afterDone.getLast());
+    }
+
+    @Test
     void emitsTerminalErrorForAnthropicErrorEvent() {
         String data = """
                 {"type":"error","error":{"type":"overloaded_error","message":"busy"}}
