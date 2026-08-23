@@ -60,6 +60,50 @@ class ProviderProtocolsUpstreamCompatibilityTest {
     }
 
     @Test
+    void anthropicCachePlacementMatchesTypeScriptOracle() throws Exception {
+        Model model = model(
+                "claude-fixture", "anthropic-messages", "anthropic",
+                "https://api.anthropic.com", 200_000, 16_384
+        );
+        AssistantMessage assistant = assistant(
+                model,
+                List.of(
+                        new ToolCallContent(
+                                "call-lookup", "lookup", Map.of("q", "x")
+                        ),
+                        new ToolCallContent(
+                                "call-fetch", "fetch",
+                                Map.of("url", "https://example.test")
+                        )
+                )
+        );
+        ModelContext context = new ModelContext(
+                "system",
+                List.of(
+                        UserMessage.text("hello", 1),
+                        assistant,
+                        new ToolResultMessage(
+                                "call-lookup", "lookup",
+                                List.of(new TextContent("lookup result")),
+                                Map.of(), null, false, 3
+                        ),
+                        new ToolResultMessage(
+                                "call-fetch", "fetch",
+                                List.of(new TextContent("fetch result")),
+                                Map.of(), null, false, 4
+                        )
+                ),
+                List.of(tool(), fetchTool())
+        );
+        JsonNode actual = new AnthropicMessagesCodec(MAPPER)
+                .encodeRequest(model, context, "medium");
+        assertEquals(
+                fixture().path("anthropic").path("cachePlacementRequest"),
+                actual
+        );
+    }
+
+    @Test
     void anthropicStreamErrorMatchesTypeScriptOracle() throws Exception {
         JsonNode expected = fixture().path("anthropic").path("streamError");
         String payload = MAPPER.writeValueAsString(expected.path("payload"));
@@ -236,6 +280,14 @@ class ProviderProtocolsUpstreamCompatibilityTest {
         schema.put("properties", Map.of("q", Map.of("type", "string")));
         schema.put("required", List.of("q"));
         return new ToolDefinition("lookup", "Lookup", schema);
+    }
+
+    private static ToolDefinition fetchTool() {
+        LinkedHashMap<String, Object> schema = new LinkedHashMap<>();
+        schema.put("type", "object");
+        schema.put("properties", Map.of("url", Map.of("type", "string")));
+        schema.put("required", List.of("url"));
+        return new ToolDefinition("fetch", "Fetch", schema);
     }
 
     private static JsonNode fixture() throws Exception {

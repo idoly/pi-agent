@@ -22,7 +22,7 @@ Status meanings:
 | Provider payload middleware | `HEADLESS_EQUIVALENT` | `ProviderRequestHooks.beforeRequest` with JDK JSON values | Real Vert.x HTTP test |
 | Provider response middleware | `HEADLESS_EQUIVALENT` | `ProviderRequestHooks.afterResponse` | Awaited before SSE consumption |
 | OpenAI Chat/Responses/Codex/Azure | `COMPATIBLE` | Vert.x OpenAI family codecs | Versioned upstream fixtures |
-| Anthropic Messages | `COMPATIBLE` | `AnthropicMessagesModelStream` | Request, stream-event, and terminal-error fixtures |
+| Anthropic Messages | `COMPATIBLE` | `AnthropicMessagesModelStream` | Request, multi-tool cache placement, stream-event, and terminal-error fixtures |
 | Google AI Studio/Vertex | `COMPATIBLE` | `GoogleGenerativeModelStream` | Upstream protocol fixture |
 | Mistral Conversations | `COMPATIBLE` | `MistralConversationsModelStream` | Final wire payload and reasoning-effort fixtures |
 | Bedrock ConverseStream | `COMPATIBLE` | `BedrockConverseModelStream` | Command/event/modeled-error fixture and CRC tests |

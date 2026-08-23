@@ -52,6 +52,22 @@ class AnthropicMessagesCodecTest {
     }
 
     @Test
+    void cachesTheLastPlainUserMessageAsATextBlock() {
+        var request = codec.encodeRequest(
+                model(),
+                new ModelContext(
+                        "", List.of(UserMessage.text("hello", 0)), List.of()
+                ),
+                null
+        );
+        var content = request.path("messages").get(0).path("content");
+        assertTrue(content.isArray());
+        assertEquals("hello", content.get(0).path("text").asText());
+        assertEquals("ephemeral", content.get(0)
+                .path("cache_control").path("type").asText());
+    }
+
+    @Test
     void decodesTextThinkingToolUsageAndTerminalMessage() {
         Multi<SseEvent> events = Multi.createFrom().items(
                 event("message_start", """

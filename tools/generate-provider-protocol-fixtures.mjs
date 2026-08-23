@@ -24,6 +24,10 @@ const tool = {
   name: "lookup", description: "Lookup",
   parameters: { type: "object", properties: { q: { type: "string" } }, required: ["q"] },
 };
+const secondTool = {
+  name: "fetch", description: "Fetch",
+  parameters: { type: "object", properties: { url: { type: "string" } }, required: ["url"] },
+};
 function normalizeEvent(event) {
   const value = { type: event.type };
   if ("contentIndex" in event) value.contentIndex = event.contentIndex;
@@ -105,6 +109,32 @@ const anthropicErrorResult = await consume(anthropic.streamSimple(
   { systemPrompt: "", messages: [{ role: "user", content: "hello", timestamp: 1 }], tools: [] },
   {
     apiKey: "fixture-key", maxTokens: anthropicModel.maxTokens,
+    fetch: async () => new Response(anthropicErrorSse, { status: 200, headers: { "content-type": "text/event-stream" } }),
+  },
+));
+let anthropicCachePlacementPayload;
+await consume(anthropic.streamSimple(
+  anthropicModel,
+  {
+    systemPrompt: "system",
+    messages: [
+      { role: "user", content: "hello", timestamp: 1 },
+      { role: "assistant", api: anthropicModel.api, provider: anthropicModel.provider,
+        model: anthropicModel.id, usage: zeroUsage, stopReason: "toolUse", timestamp: 2,
+        content: [
+          { type: "toolCall", id: "call-lookup", name: "lookup", arguments: { q: "x" } },
+          { type: "toolCall", id: "call-fetch", name: "fetch", arguments: { url: "https://example.test" } },
+        ] },
+      { role: "toolResult", toolCallId: "call-lookup", toolName: "lookup",
+        content: [{ type: "text", text: "lookup result" }], isError: false, timestamp: 3 },
+      { role: "toolResult", toolCallId: "call-fetch", toolName: "fetch",
+        content: [{ type: "text", text: "fetch result" }], isError: false, timestamp: 4 },
+    ],
+    tools: [tool, secondTool],
+  },
+  {
+    apiKey: "fixture-key", maxTokens: anthropicModel.maxTokens, reasoning: "medium",
+    onPayload(value) { anthropicCachePlacementPayload = value; },
     fetch: async () => new Response(anthropicErrorSse, { status: 200, headers: { "content-type": "text/event-stream" } }),
   },
 ));
@@ -231,7 +261,9 @@ try {
 const fixture = {
   upstream: { package: packageJson.name, version: packageJson.version },
   anthropic: {
-    request: anthropicPayload, frames: anthropicFrames.map(([, data]) => data),
+    request: anthropicPayload,
+    cachePlacementRequest: anthropicCachePlacementPayload,
+    frames: anthropicFrames.map(([, data]) => data),
     ...anthropicResult,
     streamError: { payload: anthropicErrorPayload, ...anthropicErrorResult },
   },

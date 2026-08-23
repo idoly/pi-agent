@@ -49,9 +49,10 @@ public final class AnthropicMessagesCodec {
                         .put("description", tool.description())
                         .put("eager_input_streaming", true);
                 encoded.set("input_schema", mapper.valueToTree(tool.parameters()));
-                encoded.putObject("cache_control")
-                        .put("type", "ephemeral");
             }
+            ((ObjectNode) tools.get(tools.size() - 1))
+                    .putObject("cache_control")
+                    .put("type", "ephemeral");
         }
         if (model.reasoning() && thinkingLevel != null
                 && !thinkingLevel.equals("off")) {
@@ -110,7 +111,8 @@ public final class AnthropicMessagesCodec {
 
     private ArrayNode encodeMessages(Model model, List<Message> messages) {
         ArrayNode result = mapper.createArrayNode();
-        for (Message message : messages) {
+        for (int index = 0; index < messages.size(); index++) {
+            Message message = messages.get(index);
             switch (message) {
                 case UserMessage user -> result.addObject()
                         .put("role", "user")
@@ -154,19 +156,53 @@ public final class AnthropicMessagesCodec {
                     }
                 }
                 case ToolResultMessage toolResult -> {
-                    ObjectNode block = mapper.createObjectNode()
-                            .put("type", "tool_result")
-                            .put("tool_use_id", toolResult.toolCallId())
-                            .put("is_error", toolResult.error());
-                    block.set("content", encodeUserContent(toolResult.content()));
-                    block.putObject("cache_control")
-                            .put("type", "ephemeral");
+                    ArrayNode content = mapper.createArrayNode();
+                    content.add(encodeToolResult(toolResult));
+                    while (index + 1 < messages.size()
+                            && messages.get(index + 1) instanceof ToolResultMessage next) {
+                        content.add(encodeToolResult(next));
+                        index++;
+                    }
                     result.addObject().put("role", "user")
-                            .set("content", mapper.createArrayNode().add(block));
+                            .set("content", content);
                 }
             }
         }
+        addConversationCacheControl(result);
         return result;
+    }
+
+    private ObjectNode encodeToolResult(ToolResultMessage toolResult) {
+        ObjectNode block = mapper.createObjectNode()
+                .put("type", "tool_result")
+                .put("tool_use_id", toolResult.toolCallId())
+                .put("is_error", toolResult.error());
+        block.set("content", encodeUserContent(toolResult.content()));
+        return block;
+    }
+
+    private void addConversationCacheControl(ArrayNode messages) {
+        if (messages.isEmpty()) return;
+        JsonNode last = messages.get(messages.size() - 1);
+        if (!"user".equals(last.path("role").asText())) return;
+        JsonNode content = last.get("content");
+        ObjectNode block;
+        if (content.isTextual()) {
+            ArrayNode blocks = mapper.createArrayNode();
+            block = blocks.addObject()
+                    .put("type", "text")
+                    .put("text", content.asText());
+            ((ObjectNode) last).set("content", blocks);
+        } else if (content.isArray() && !content.isEmpty()
+                && content.get(content.size() - 1).isObject()) {
+            block = (ObjectNode) content.get(content.size() - 1);
+            String type = block.path("type").asText();
+            if (!type.equals("text") && !type.equals("image")
+                    && !type.equals("tool_result")) return;
+        } else {
+            return;
+        }
+        block.putObject("cache_control").put("type", "ephemeral");
     }
 
     private JsonNode encodeUserContent(List<ContentBlock> blocks) {
