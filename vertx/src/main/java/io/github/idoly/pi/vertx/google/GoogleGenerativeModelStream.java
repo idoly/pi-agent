@@ -68,23 +68,11 @@ public final class GoogleGenerativeModelStream
                     "Unsupported Google API " + model.api()
             ));
         }
-        if (options.apiKey() == null || options.apiKey().isBlank()) {
-            return Multi.createFrom().failure(new IllegalArgumentException(
-                    "No API key for provider: " + model.provider()
-            ));
-        }
-        Map<String, String> headers = new LinkedHashMap<>(options.headers());
-        headers.put("content-type", "application/json");
-        headers.put("accept", "text/event-stream");
-        if (model.api().equals("google-vertex")) {
-            if (options.apiKey().startsWith("ya29.")
-                    || options.apiKey().startsWith("eyJ")) {
-                headers.put("authorization", "Bearer " + options.apiKey());
-            } else {
-                headers.put("x-goog-api-key", options.apiKey());
-            }
-        } else {
-            headers.put("x-goog-api-key", options.apiKey());
+        Map<String, String> headers;
+        try {
+            headers = authenticationHeaders(model, options);
+        } catch (IllegalArgumentException failure) {
+            return Multi.createFrom().failure(failure);
         }
         return ProviderHttpHooks.prepare(
                 mapper, model,
@@ -105,6 +93,54 @@ public final class GoogleGenerativeModelStream
                             codec.decode(response.events(), model)
                     );
         });
+    }
+
+    static Map<String, String> authenticationHeaders(
+            Model model,
+            StreamOptions options
+    ) {
+        LinkedHashMap<String, String> headers =
+                new LinkedHashMap<>(options.headers());
+        headers.put("content-type", "application/json");
+        headers.put("accept", "text/event-stream");
+        String credential = options.apiKey() == null
+                ? null : options.apiKey().trim();
+        String suppliedAuthorization = headers.entrySet().stream()
+                .filter(entry -> entry.getKey().equalsIgnoreCase("authorization"))
+                .map(Map.Entry::getValue)
+                .filter(value -> value != null && !value.isBlank())
+                .findFirst().orElse(null);
+        if (model.api().equals("google-vertex")
+                && suppliedAuthorization != null) {
+            return Map.copyOf(headers);
+        }
+        if (credential == null || credential.isBlank()) {
+            throw new IllegalArgumentException(
+                    "No API key or access token for provider: "
+                            + model.provider()
+            );
+        }
+        if (model.api().equals("google-vertex")
+                && isBearerCredential(credential)) {
+            String token = credential.substring(
+                    credential.indexOf(' ') + 1
+            ).trim();
+            headers.put("authorization", "Bearer " + token);
+        } else if (model.api().equals("google-vertex")
+                && (credential.startsWith("ya29.")
+                || credential.startsWith("eyJ"))) {
+            headers.put("authorization", "Bearer " + credential);
+        } else {
+            headers.put("x-goog-api-key", credential);
+        }
+        return Map.copyOf(headers);
+    }
+
+    private static boolean isBearerCredential(String value) {
+        int separator = value.indexOf(' ');
+        return separator > 0
+                && value.substring(0, separator).equalsIgnoreCase("Bearer")
+                && !value.substring(separator + 1).isBlank();
     }
 
     static URI uri(Model model) {

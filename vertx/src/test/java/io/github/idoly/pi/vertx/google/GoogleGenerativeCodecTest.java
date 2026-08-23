@@ -116,6 +116,54 @@ class GoogleGenerativeCodecTest {
     }
 
     @Test
+    void supportsExplicitOpaqueVertexBearerTokens() {
+        Model vertex = model("google-vertex");
+        Map<String, String> headers = GoogleGenerativeModelStream
+                .authenticationHeaders(vertex, new StreamOptions(
+                        "session", "Bearer opaque-access-token", "off",
+                        CancellationSignal.NONE
+                ));
+        assertEquals("Bearer opaque-access-token", headers.get("authorization"));
+        assertFalse(headers.containsKey("x-goog-api-key"));
+    }
+
+    @Test
+    void preservesHostSuppliedVertexAuthorizationWithoutAnApiKey() {
+        Model vertex = model("google-vertex");
+        Map<String, String> headers = GoogleGenerativeModelStream
+                .authenticationHeaders(vertex, new StreamOptions(
+                        "session", null, "off", CancellationSignal.NONE,
+                        Map.of("Authorization", "Bearer refreshed-token")
+                ));
+        assertEquals("Bearer refreshed-token", headers.get("Authorization"));
+        assertFalse(headers.containsKey("x-goog-api-key"));
+    }
+
+    @Test
+    void preservesLegacyVertexAccessTokenDetection() {
+        Model vertex = model("google-vertex");
+        Map<String, String> headers = GoogleGenerativeModelStream
+                .authenticationHeaders(vertex, new StreamOptions(
+                        "session", "ya29.legacy-token", "off",
+                        CancellationSignal.NONE
+                ));
+        assertEquals("Bearer ya29.legacy-token", headers.get("authorization"));
+        assertFalse(headers.containsKey("x-goog-api-key"));
+    }
+
+    @Test
+    void keepsOpaqueVertexApiKeysAsApiKeys() {
+        Model vertex = model("google-vertex");
+        Map<String, String> headers = GoogleGenerativeModelStream
+                .authenticationHeaders(vertex, new StreamOptions(
+                        "session", "opaque-api-key", "off",
+                        CancellationSignal.NONE
+                ));
+        assertEquals("opaque-api-key", headers.get("x-goog-api-key"));
+        assertFalse(headers.containsKey("authorization"));
+    }
+
+    @Test
     void buildsAiStudioAndVertexUris() {
         assertEquals(
                 "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro:streamGenerateContent?alt=sse",

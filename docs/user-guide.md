@@ -1020,7 +1020,15 @@ google-vertex
 bedrock-converse-stream
 ```
 
-Google Vertex接受API key或host提供的OAuth access token，并使用`GOOGLE_CLOUD_PROJECT`和`GOOGLE_CLOUD_LOCATION`展开catalog endpoint。Bedrock接受`AWS_BEARER_TOKEN_BEDROCK`，或使用`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`、`AWS_SESSION_TOKEN`执行SigV4。AWS profile文件和OAuth refresh-token持久化由host负责，不由SDK读取或保存。
+Google Vertex接受API key或host提供的OAuth access token，并使用`GOOGLE_CLOUD_PROJECT`和`GOOGLE_CLOUD_LOCATION`展开catalog endpoint。OAuth token不按内容猜测类型：host的异步`ApiKeyResolver`应在每次调用时刷新并返回完整的`Bearer <access-token>`值；直接调用`ModelStream`时也可在`StreamOptions.headers()`提供`Authorization: Bearer <access-token>`。旧的`ya29.`和JWT前缀token仍保持兼容。SDK不读取或持久化OAuth refresh credential。
+
+```java
+ApiKeyResolver vertexTokenResolver = provider ->
+        oauthClient.refreshAccessToken()
+                .thenApply(token -> "Bearer " + token);
+```
+
+Bedrock接受`AWS_BEARER_TOKEN_BEDROCK`，或使用`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`、`AWS_SESSION_TOKEN`执行SigV4。AWS profile文件和credential-chain持久化由host负责，不由SDK读取或保存。
 
 自定义Ollama/vLLM/LM Studio或代理可读取pi风格`models.json`：
 
