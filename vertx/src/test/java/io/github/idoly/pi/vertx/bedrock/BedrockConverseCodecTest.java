@@ -96,6 +96,26 @@ class BedrockConverseCodecTest {
     }
 
     @Test
+    void eventBinaryValuesAreDeeplyImmutable() {
+        byte[] header = {1, 2, 3};
+        byte[] payload = {4, 5, 6};
+        AwsEventStreamDecoder.Event event = new AwsEventStreamDecoder.Event(
+                Map.of("binary", header), payload
+        );
+        header[0] = 9;
+        payload[0] = 9;
+        assertArrayEquals(new byte[]{1, 2, 3},
+                (byte[]) event.headers().get("binary"));
+        assertArrayEquals(new byte[]{4, 5, 6}, event.payload());
+
+        ((byte[]) event.headers().get("binary"))[1] = 9;
+        event.payload()[1] = 9;
+        assertArrayEquals(new byte[]{1, 2, 3},
+                (byte[]) event.headers().get("binary"));
+        assertArrayEquals(new byte[]{4, 5, 6}, event.payload());
+    }
+
+    @Test
     void encodesBedrockMessagesToolsAndThinking() {
         Model model = model();
         AssistantMessage assistant = new AssistantMessage(

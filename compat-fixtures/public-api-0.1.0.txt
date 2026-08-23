@@ -4027,12 +4027,12 @@ public final class io.github.idoly.pi.vertx.bedrock.AwsEventStreamDecoder {
 ## io.github.idoly.pi.vertx.bedrock.AwsEventStreamDecoder$Event
 public final class io.github.idoly.pi.vertx.bedrock.AwsEventStreamDecoder$Event extends java.lang.Record {
   public io.github.idoly.pi.vertx.bedrock.AwsEventStreamDecoder$Event(java.util.Map<java.lang.String, java.lang.Object>, byte[]);
+  public java.util.Map<java.lang.String, java.lang.Object> headers();
   public byte[] payload();
   public java.lang.String header(java.lang.String);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
-  public java.util.Map<java.lang.String, java.lang.Object> headers();
 }
 
 ## io.github.idoly.pi.vertx.bedrock.AwsSigV4

@@ -143,8 +143,13 @@ public final class AwsEventStreamDecoder {
 
     public record Event(Map<String, Object> headers, byte[] payload) {
         public Event {
-            headers = Map.copyOf(headers);
+            headers = copyHeaders(headers);
             payload = payload.clone();
+        }
+
+        @Override
+        public Map<String, Object> headers() {
+            return copyHeaders(headers);
         }
 
         @Override
@@ -155,6 +160,17 @@ public final class AwsEventStreamDecoder {
         public String header(String name) {
             Object value = headers.get(name);
             return value == null ? null : String.valueOf(value);
+        }
+
+        private static Map<String, Object> copyHeaders(
+                Map<String, Object> source
+        ) {
+            LinkedHashMap<String, Object> copied = new LinkedHashMap<>();
+            source.forEach((name, value) -> copied.put(
+                    name, value instanceof byte[] bytes
+                            ? bytes.clone() : value
+            ));
+            return Map.copyOf(copied);
         }
     }
 }

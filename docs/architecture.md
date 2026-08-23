@@ -30,7 +30,7 @@ The Core consumes a `ModelStream`, represented as a JDK `Flow.Publisher<Assistan
 - Vert.x 5.1.6
 - SmallRye Mutiny 3.3.0
 
-Vert.x owns HTTP connection pooling, HTTP/2 multiplexing, TLS, request timeout, and stream reset. Mutiny owns asynchronous composition, single-subscriber buffering, demand, idle timeout, and cancellation propagation. Transport parsing covers SSE and CRC-validated AWS Smithy event-stream frames; public binary chunks use `byte[]`, so Vert.x `Buffer` remains module-local.
+Vert.x owns HTTP connection pooling, HTTP/2 multiplexing, TLS, request timeout, and stream reset. Mutiny owns asynchronous composition, single-subscriber buffering, demand, idle timeout, and cancellation propagation. Transport parsing covers SSE and CRC-validated AWS Smithy event-stream frames; public binary chunks use defensively copied `byte[]`, including binary/UUID event headers, so Vert.x `Buffer` remains module-local.
 
 ## Concurrency contract
 
