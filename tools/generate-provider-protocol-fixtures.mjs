@@ -39,6 +39,7 @@ function normalizeMessage(message) {
         : { type: "toolCall", id: block.id, name: block.name, arguments: block.arguments,
           signature: block.thoughtSignature }),
     stopReason: message.stopReason,
+    errorMessage: message.errorMessage,
     responseId: message.responseId,
     rawStopReason: message.rawStopReason,
     usage: {
@@ -95,6 +96,18 @@ const anthropicResult = await consume(anthropic.streamSimple(anthropicModel, ant
   reasoning: "medium", onPayload(value) { anthropicPayload = value; },
   fetch: async () => new Response(anthropicSse, { status: 200, headers: { "content-type": "text/event-stream" } }),
 }));
+const anthropicErrorPayload = {
+  type: "error", error: { type: "overloaded_error", message: "busy" },
+};
+const anthropicErrorSse = `event: error\ndata: ${JSON.stringify(anthropicErrorPayload)}\n\n`;
+const anthropicErrorResult = await consume(anthropic.streamSimple(
+  anthropicModel,
+  { systemPrompt: "", messages: [{ role: "user", content: "hello", timestamp: 1 }], tools: [] },
+  {
+    apiKey: "fixture-key", maxTokens: anthropicModel.maxTokens,
+    fetch: async () => new Response(anthropicErrorSse, { status: 200, headers: { "content-type": "text/event-stream" } }),
+  },
+));
 
 const googleModel = {
   id: "gemini-3-pro", name: "Gemini Fixture", api: "google-generative-ai",
@@ -157,6 +170,18 @@ const mistralResult = await consume(mistral.streamSimple(mistralModel, mistralCo
     return new Response(mistralSse, { status: 200, headers: { "content-type": "text/event-stream" } });
   },
 }));
+let mistralReasoningEffortRequest;
+await consume(mistral.streamSimple({
+  ...mistralModel,
+  id: "mistral-small-2603",
+  thinkingLevelMap: { low: "low" },
+}, { systemPrompt: "", messages: [{ role: "user", content: "hello", timestamp: 1 }], tools: [] }, {
+  apiKey: "fixture-key", reasoning: "low",
+  fetch: async (url, init) => {
+    mistralReasoningEffortRequest = JSON.parse(init.body);
+    return new Response(mistralSse, { status: 200, headers: { "content-type": "text/event-stream" } });
+  },
+}));
 
 const require = createRequire(`${aiRoot}/dist/api/bedrock-converse-stream.js`);
 const aws = require("@aws-sdk/client-bedrock-runtime");
@@ -174,28 +199,55 @@ aws.BedrockRuntimeClient.prototype.send = async function(command) {
   bedrockPayload = command.input;
   return { $metadata: { requestId: "bedrock-response", httpStatusCode: 200 }, stream: (async function* () { yield* bedrockFrames; })() };
 };
+const bedrockModel = {
+  id: "anthropic.claude-fixture", name: "Bedrock Fixture", api: "bedrock-converse-stream",
+  provider: "amazon-bedrock", baseUrl: "https://bedrock-runtime.us-east-1.amazonaws.com",
+  reasoning: true, input: ["text"],
+  cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+  contextWindow: 200000, maxTokens: 16000,
+};
 let bedrockResult;
+let bedrockErrorResult;
 try {
-  const bedrockModel = {
-    id: "anthropic.claude-fixture", name: "Bedrock Fixture", api: "bedrock-converse-stream",
-    provider: "amazon-bedrock", baseUrl: "https://bedrock-runtime.us-east-1.amazonaws.com",
-    reasoning: true, input: ["text"],
-    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-    contextWindow: 200000, maxTokens: 16000,
-  };
   bedrockResult = await consume(bedrock.stream(bedrockModel, {
     systemPrompt: "system", messages: [{ role: "user", content: "hello", timestamp: 1 }], tools: [tool],
   }, { bearerToken: "fixture-token", maxTokens: bedrockModel.maxTokens, reasoning: "medium" }));
+  aws.BedrockRuntimeClient.prototype.send = async function() {
+    const error = new aws.ThrottlingException({
+      message: "slow down", $metadata: {},
+    });
+    return {
+      $metadata: { requestId: "bedrock-error", httpStatusCode: 200 },
+      stream: (async function* () { yield { throttlingException: error }; })(),
+    };
+  };
+  bedrockErrorResult = await consume(bedrock.stream(bedrockModel, {
+    systemPrompt: "", messages: [{ role: "user", content: "hello", timestamp: 1 }], tools: [],
+  }, { bearerToken: "fixture-token", maxTokens: bedrockModel.maxTokens }));
 } finally {
   aws.BedrockRuntimeClient.prototype.send = originalSend;
 }
 
 const fixture = {
   upstream: { package: packageJson.name, version: packageJson.version },
-  anthropic: { request: anthropicPayload, frames: anthropicFrames.map(([, data]) => data), ...anthropicResult },
+  anthropic: {
+    request: anthropicPayload, frames: anthropicFrames.map(([, data]) => data),
+    ...anthropicResult,
+    streamError: { payload: anthropicErrorPayload, ...anthropicErrorResult },
+  },
   google: googleFixture,
-  mistral: { request: mistralPayload, wireRequest: mistralWirePayload, chunks: mistralChunks, ...mistralResult },
-  bedrock: { request: bedrockPayload, frames: bedrockFrames, ...bedrockResult },
+  mistral: {
+    request: mistralPayload, wireRequest: mistralWirePayload,
+    reasoningEffortRequest: mistralReasoningEffortRequest,
+    chunks: mistralChunks, ...mistralResult,
+  },
+  bedrock: {
+    request: bedrockPayload, frames: bedrockFrames, ...bedrockResult,
+    modeledError: {
+      eventType: "throttlingException", payload: { message: "slow down" },
+      ...bedrockErrorResult,
+    },
+  },
 };
 await mkdir(dirname(outputPath), { recursive: true });
 await writeFile(outputPath, `${JSON.stringify(fixture, null, 2)}\n`);

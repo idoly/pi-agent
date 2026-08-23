@@ -7,12 +7,19 @@ import io.github.idoly.pi.ai.*;
 import io.github.idoly.pi.vertx.anthropic.AnthropicMessagesCodec;
 import io.github.idoly.pi.vertx.bedrock.BedrockConverseCodec;
 import io.github.idoly.pi.vertx.google.GoogleGenerativeCodec;
+import io.github.idoly.pi.vertx.SseEvent;
+import io.smallrye.mutiny.Multi;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.CRC32;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -50,6 +57,31 @@ class ProviderProtocolsUpstreamCompatibilityTest {
         JsonNode actual = new AnthropicMessagesCodec(MAPPER)
                 .encodeRequest(model, context, "medium");
         assertEquals(fixture().path("anthropic").path("request"), actual);
+    }
+
+    @Test
+    void anthropicStreamErrorMatchesTypeScriptOracle() throws Exception {
+        JsonNode expected = fixture().path("anthropic").path("streamError");
+        String payload = MAPPER.writeValueAsString(expected.path("payload"));
+        List<AssistantStreamEvent> events = new AnthropicMessagesCodec(MAPPER)
+                .decode(Multi.createFrom().item(
+                        new SseEvent("error", payload, null, null)
+                ), model(
+                        "claude-fixture", "anthropic-messages", "anthropic",
+                        "https://api.anthropic.com", 200_000, 16_384
+                ))
+                .collect().asList().await().indefinitely();
+        AssistantMessage actual = ((AssistantStreamEvent.Error)
+                events.getLast()).message();
+
+        assertEquals(List.of("start", "error"), events.stream().map(event ->
+                event instanceof AssistantStreamEvent.Start ? "start"
+                        : event instanceof AssistantStreamEvent.Error
+                        ? "error" : event.getClass().getSimpleName()
+        ).toList());
+        assertEquals(expected.path("message").path("errorMessage").asText(),
+                actual.errorMessage());
+        assertEquals(StopReason.ERROR, actual.stopReason());
     }
 
     @Test
@@ -113,6 +145,70 @@ class ProviderProtocolsUpstreamCompatibilityTest {
                 .path("request").deepCopy();
         expected.remove("modelId");
         assertEquals(expected, actual);
+    }
+
+    @Test
+    void bedrockModeledErrorMatchesTypeScriptOracle() throws Exception {
+        JsonNode expected = fixture().path("bedrock").path("modeledError");
+        Model model = model(
+                "anthropic.claude-fixture", "bedrock-converse-stream",
+                "amazon-bedrock",
+                "https://bedrock-runtime.us-east-1.amazonaws.com",
+                200_000, 16_000
+        );
+        byte[] frame = bedrockFrame(
+                expected.path("eventType").asText(),
+                MAPPER.writeValueAsString(expected.path("payload"))
+        );
+        List<AssistantStreamEvent> events = new BedrockConverseCodec(MAPPER)
+                .decode(Multi.createFrom().item(frame), model)
+                .collect().asList().await().indefinitely();
+        AssistantMessage actual = ((AssistantStreamEvent.Error)
+                events.getLast()).message();
+
+        assertEquals(List.of("error"), events.stream().map(event ->
+                event instanceof AssistantStreamEvent.Error
+                        ? "error" : event.getClass().getSimpleName()
+        ).toList());
+        assertEquals(expected.path("message").path("stopReason").asText(),
+                actual.stopReason().name().toLowerCase());
+        assertEquals(expected.path("message").path("errorMessage").asText(),
+                actual.errorMessage());
+    }
+
+    private static byte[] bedrockFrame(String eventType, String json) {
+        byte[] headers = bedrockHeaders(Map.of(
+                ":message-type", "exception",
+                ":event-type", eventType,
+                ":content-type", "application/json"
+        ));
+        byte[] payload = json.getBytes(StandardCharsets.UTF_8);
+        int total = 16 + headers.length + payload.length;
+        ByteBuffer frame = ByteBuffer.allocate(total).order(ByteOrder.BIG_ENDIAN);
+        frame.putInt(total).putInt(headers.length);
+        CRC32 prelude = new CRC32();
+        prelude.update(frame.array(), 0, 8);
+        frame.putInt((int) prelude.getValue());
+        frame.put(headers).put(payload);
+        CRC32 message = new CRC32();
+        message.update(frame.array(), 0, total - 4);
+        frame.putInt((int) message.getValue());
+        return frame.array();
+    }
+
+    private static byte[] bedrockHeaders(Map<String, String> headers) {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        headers.forEach((name, value) -> {
+            byte[] key = name.getBytes(StandardCharsets.UTF_8);
+            byte[] data = value.getBytes(StandardCharsets.UTF_8);
+            output.write(key.length);
+            output.writeBytes(key);
+            output.write(7);
+            output.write((data.length >>> 8) & 0xff);
+            output.write(data.length & 0xff);
+            output.writeBytes(data);
+        });
+        return output.toByteArray();
     }
 
     private static Model model(

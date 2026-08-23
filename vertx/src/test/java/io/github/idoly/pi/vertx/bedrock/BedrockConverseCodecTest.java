@@ -62,6 +62,40 @@ class BedrockConverseCodecTest {
     }
 
     @Test
+    void mapsModeledExceptionFramesToStableTerminalErrors() {
+        Map<String, String> prefixes = Map.of(
+                "internalServerException", "Internal server error",
+                "modelStreamErrorException", "Model stream error",
+                "validationException", "Validation error",
+                "throttlingException", "Throttling error",
+                "serviceUnavailableException", "Service unavailable"
+        );
+        prefixes.forEach((eventType, prefix) -> {
+            List<AssistantStreamEvent> events = codec.decode(
+                    Multi.createFrom().item(frame(
+                            "exception", eventType,
+                            "{\"message\":\"provider detail\"}"
+                    )), model()
+            ).collect().asList().await().indefinitely();
+            AssistantMessage error = ((AssistantStreamEvent.Error)
+                    events.getLast()).message();
+            assertEquals(prefix + ": provider detail", error.errorMessage());
+            assertNull(error.rawStopReason());
+            assertEquals(StopReason.ERROR, error.stopReason());
+        });
+
+        AssistantMessage retention = ((AssistantStreamEvent.Error) codec.decode(
+                Multi.createFrom().item(frame(
+                        "exception", "validationException",
+                        "{\"message\":\"data retention mode default is unavailable\"}"
+                )), model()
+        ).collect().asList().await().indefinitely().getLast()).message();
+        assertTrue(retention.errorMessage().contains(
+                "userguide/data-retention.html"
+        ));
+    }
+
+    @Test
     void encodesBedrockMessagesToolsAndThinking() {
         Model model = model();
         AssistantMessage assistant = new AssistantMessage(
@@ -114,8 +148,14 @@ class BedrockConverseCodecTest {
     }
 
     private static byte[] frame(String eventType, String json) {
+        return frame("event", eventType, json);
+    }
+
+    private static byte[] frame(
+            String messageType, String eventType, String json
+    ) {
         byte[] headers = headers(Map.of(
-                ":message-type", "event",
+                ":message-type", messageType,
                 ":event-type", eventType,
                 ":content-type", "application/json"
         ));

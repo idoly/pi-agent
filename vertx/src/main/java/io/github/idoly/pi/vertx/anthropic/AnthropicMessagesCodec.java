@@ -80,18 +80,26 @@ public final class AnthropicMessagesCodec {
     ) {
         State state = new State(model, mapper);
         AtomicBoolean stopped = new AtomicBoolean();
-        return events.onItem().transformToMultiAndConcatenate(event -> {
-            try {
-                List<AssistantStreamEvent> decoded = state.accept(event);
-                if (decoded.stream().anyMatch(value ->
-                        value instanceof AssistantStreamEvent.Done)) {
-                    stopped.set(true);
-                }
-                return Multi.createFrom().iterable(decoded);
-            } catch (RuntimeException failure) {
-                return Multi.createFrom().failure(failure);
-            }
-        }).onCompletion().call(() -> stopped.get()
+        Multi<AssistantStreamEvent> decoded = events.onItem()
+                .transformToMultiAndConcatenate(event -> {
+                    try {
+                        List<AssistantStreamEvent> output = state.accept(event);
+                        if (output.stream().anyMatch(value ->
+                                value instanceof AssistantStreamEvent.Done
+                                        || value instanceof AssistantStreamEvent.Error)) {
+                            stopped.set(true);
+                        }
+                        return Multi.createFrom().iterable(output);
+                    } catch (RuntimeException failure) {
+                        return Multi.createFrom().failure(failure);
+                    }
+                });
+        return Multi.createBy().concatenating().streams(
+                Multi.createFrom().item(new AssistantStreamEvent.Start(
+                        state.snapshot()
+                )),
+                decoded
+        ).onCompletion().call(() -> stopped.get()
                 ? io.smallrye.mutiny.Uni.createFrom().voidItem()
                 : io.smallrye.mutiny.Uni.createFrom().failure(
                         new IllegalStateException(
@@ -225,10 +233,9 @@ public final class AnthropicMessagesCodec {
             String type = value.path("type").asText(event.event());
             return switch (type) {
                 case "ping" -> List.of();
-                case "error" -> throw new IllegalStateException(
-                        value.path("error").path("message")
-                                .asText("Anthropic stream error")
-                );
+                case "error" -> List.of(new AssistantStreamEvent.Error(
+                        error(event.data())
+                ));
                 case "message_start" -> messageStart(value);
                 case "content_block_start" -> contentStart(value);
                 case "content_block_delta" -> contentDelta(value);
@@ -251,7 +258,7 @@ public final class AnthropicMessagesCodec {
                     inputUsage.path("cache_creation_input_tokens").asLong()
             );
             started = true;
-            return List.of(new AssistantStreamEvent.Start(snapshot()));
+            return List.of();
         }
 
         private List<AssistantStreamEvent> contentStart(JsonNode value) {
@@ -375,6 +382,15 @@ public final class AnthropicMessagesCodec {
                     blocks, model.api(), model.provider(), model.id(),
                     UsageCosts.calculate(model, usage),
                     stopReason, null, System.currentTimeMillis(),
+                    responseId, rawStopReason
+            );
+        }
+
+        private AssistantMessage error(String message) {
+            return new AssistantMessage(
+                    List.copyOf(blocks), model.api(), model.provider(),
+                    model.id(), UsageCosts.calculate(model, usage),
+                    StopReason.ERROR, message, System.currentTimeMillis(),
                     responseId, rawStopReason
             );
         }

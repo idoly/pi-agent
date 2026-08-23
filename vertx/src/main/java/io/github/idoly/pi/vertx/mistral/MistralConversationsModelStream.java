@@ -146,7 +146,15 @@ public final class MistralConversationsModelStream
         if (model.reasoning() && options.thinkingLevel() != null
                 && !options.thinkingLevel().equals("off")) {
             if (usesReasoningEffort(model.id())) {
-                request.put("reasoning_effort", "high");
+                String effort = "high";
+                ThinkingLevelMap mapping = model.thinkingLevelMap();
+                if (mapping != null) {
+                    String mapped = mapping.providerValue(
+                            options.thinkingLevel()
+                    );
+                    if (mapped != null) effort = mapped;
+                }
+                request.put("reasoning_effort", effort);
             } else {
                 request.put("prompt_mode", "reasoning");
             }

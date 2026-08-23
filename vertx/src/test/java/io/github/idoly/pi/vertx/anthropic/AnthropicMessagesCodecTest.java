@@ -99,6 +99,22 @@ class AnthropicMessagesCodecTest {
         assertEquals(2, message.usage().cacheWrite());
     }
 
+    @Test
+    void emitsTerminalErrorForAnthropicErrorEvent() {
+        String data = """
+                {"type":"error","error":{"type":"overloaded_error","message":"busy"}}
+                """.strip();
+        List<AssistantStreamEvent> decoded = codec.decode(
+                Multi.createFrom().item(event("error", data)), model()
+        ).collect().asList().await().indefinitely();
+        assertEquals(2, decoded.size());
+        assertInstanceOf(AssistantStreamEvent.Start.class, decoded.getFirst());
+        AssistantMessage error = ((AssistantStreamEvent.Error)
+                decoded.getLast()).message();
+        assertEquals(StopReason.ERROR, error.stopReason());
+        assertEquals(data, error.errorMessage());
+    }
+
     private static SseEvent event(String event, String data) {
         return new SseEvent(event, data.strip(), null, null);
     }

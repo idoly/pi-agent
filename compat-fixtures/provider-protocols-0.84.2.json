@@ -225,6 +225,35 @@
         "cacheWrite": 2,
         "totalTokens": 22
       }
+    },
+    "streamError": {
+      "payload": {
+        "type": "error",
+        "error": {
+          "type": "overloaded_error",
+          "message": "busy"
+        }
+      },
+      "events": [
+        {
+          "type": "start"
+        },
+        {
+          "type": "error"
+        }
+      ],
+      "message": {
+        "content": [],
+        "stopReason": "error",
+        "errorMessage": "{\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"busy\"}}",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0
+        }
+      }
     }
   },
   "google": {
@@ -438,6 +467,18 @@
       "max_tokens": 32000,
       "prompt_mode": "reasoning",
       "prompt_cache_key": "session"
+    },
+    "reasoningEffortRequest": {
+      "model": "mistral-small-2603",
+      "stream": true,
+      "messages": [
+        {
+          "role": "user",
+          "content": "hello"
+        }
+      ],
+      "max_tokens": 32000,
+      "reasoning_effort": "low"
     },
     "chunks": [
       {
@@ -726,6 +767,29 @@
         "cacheRead": 2,
         "cacheWrite": 1,
         "totalTokens": 14
+      }
+    },
+    "modeledError": {
+      "eventType": "throttlingException",
+      "payload": {
+        "message": "slow down"
+      },
+      "events": [
+        {
+          "type": "error"
+        }
+      ],
+      "message": {
+        "content": [],
+        "stopReason": "error",
+        "errorMessage": "Throttling error: slow down",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0
+        }
       }
     }
   }

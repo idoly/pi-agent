@@ -234,9 +234,9 @@ public final class BedrockConverseCodec {
             }
             if ("exception".equals(messageType)) {
                 terminal = true;
-                String message = value.path("message")
-                        .asText(eventType == null ? "Bedrock error" : eventType);
-                return List.of(new AssistantStreamEvent.Error(error(message)));
+                return List.of(new AssistantStreamEvent.Error(error(
+                        formatException(eventType, value)
+                )));
             }
             return switch (eventType == null ? "" : eventType) {
                 case "messageStart" -> {
@@ -389,6 +389,30 @@ public final class BedrockConverseCodec {
                     message, System.currentTimeMillis(),
                     null, rawStop
             );
+        }
+
+        private static String formatException(
+                String eventType, JsonNode value
+        ) {
+            String code = eventType == null || eventType.isBlank()
+                    ? "BedrockException"
+                    : Character.toUpperCase(eventType.charAt(0))
+                    + eventType.substring(1);
+            String prefix = switch (code) {
+                case "InternalServerException" -> "Internal server error";
+                case "ModelStreamErrorException" -> "Model stream error";
+                case "ValidationException" -> "Validation error";
+                case "ThrottlingException" -> "Throttling error";
+                case "ServiceUnavailableException" -> "Service unavailable";
+                default -> code;
+            };
+            String message = value.path("message").asText(code);
+            String hint = message.toLowerCase(java.util.Locale.ROOT)
+                    .contains("data retention mode")
+                    ? " See https://docs.aws.amazon.com/bedrock/latest/"
+                    + "userguide/data-retention.html for supported data retention modes."
+                    : "";
+            return prefix + ": " + message + hint;
         }
 
         private void requireStarted() {

@@ -79,6 +79,39 @@ class MistralConversationsModelStreamTest {
     }
 
     @Test
+    void reasoningEffortMappingMatchesTypeScriptOracle() throws Exception {
+        Model model = new Model(
+                "mistral-small-2603", "Mistral Small",
+                "mistral-conversations", "mistral",
+                "https://api.mistral.ai", true, List.of("text"),
+                128_000, 32_000,
+                new ThinkingLevelMap(Map.of("low", "low")),
+                ModelPricing.ZERO
+        );
+        try (MistralConversationsModelStream stream =
+                     new MistralConversationsModelStream()) {
+            var actual = stream.encodeRequest(
+                    model,
+                    new ModelContext(
+                            "", List.of(UserMessage.text("hello", 1))
+                    ),
+                    new StreamOptions(
+                            null, "fixture-key", "low",
+                            CancellationSignal.NONE
+                    )
+            );
+            var fixture = new ObjectMapper().readTree(Path.of(
+                    System.getProperty("pi.compatFixtures"),
+                    "provider-protocols-0.84.2.json"
+            ).toFile());
+            assertEquals(
+                    fixture.path("mistral").path("reasoningEffortRequest"),
+                    actual
+            );
+        }
+    }
+
+    @Test
     void decodesMistralThinkingContentArray() {
         OpenAiChatCodec codec = new OpenAiChatCodec(new ObjectMapper());
         Multi<SseEvent> source = Multi.createFrom().items(
