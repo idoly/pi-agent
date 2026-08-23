@@ -2,6 +2,10 @@
 
 The project has two compatibility layers. They must not be conflated.
 
+## SDK scope
+
+`pi-agent` is a headless Java Agent SDK. Extension evolution targets a native Java SPI and host-neutral lifecycle, tool, provider, command, and persistence contracts. Existing TypeScript extensions are not loaded or executed and must be rewritten against the Java SPI. TUI components, terminal rendering hooks, themes, custom editors, overlays, and TypeScript renderer callbacks are outside the SDK scope. Skills are a separate resource protocol and target Agent Skills frontmatter, discovery, validation, and progressive-disclosure compatibility.
+
 ## Upstream compatibility
 
 The AI message/model contracts, agent loop behavior, session v4 records/codecs,

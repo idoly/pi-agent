@@ -10,7 +10,7 @@
   <packaging>pom</packaging>
 
   <name>pi-agent</name>
-  <description>Java 25 port of pi agent core, providers, and durable sessions</description>
+  <description>Java 25 Agent SDK implementation of pi for JVM applications</description>
   <url>https://github.com/idoly/pi-agent</url>
 
   <licenses>

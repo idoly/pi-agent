@@ -1,6 +1,8 @@
 # pi-agent 使用手册
 
-本文面向`pi-agent`应用开发者和运维人员，适用于`0.1.0-SNAPSHOT`，目标上游版本为pi `0.84.2`。运行环境要求JDK 25。
+`pi-agent`是pi的Java 25 Agent SDK实现，面向需要在JVM应用中嵌入模型、Agent、工具、session和durable execution的开发者与运维人员。本文适用于`0.1.0-SNAPSHOT`，目标上游版本为pi `0.84.2`。
+
+SDK定位为headless JVM runtime。未来extensions使用原生Java SPI，不直接加载TypeScript扩展；TUI专属渲染、themes、custom editor和terminal overlay不在项目范围内。Skills独立遵循Agent Skills文件协议，不受该限制。
 
 ## 1. 选择模块
 

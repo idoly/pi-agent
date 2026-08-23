@@ -1,6 +1,6 @@
 # pi-agent
 
-`pi-agent` is a Java 25 port of pi under the `io.github.idoly` Maven group, starting with the `@earendil-works/pi-agent-core` runtime contract.
+`pi-agent` is the Java 25 Agent SDK implementation of pi under the `io.github.idoly` Maven group. It ports pi's model, provider, agent, session, and compaction contracts to JVM applications and extends them with durable cross-process execution and recovery.
 
 ## 使用手册
 
@@ -13,6 +13,10 @@ mvn clean verify
 ```
 
 The build attaches binary, source, and Javadoc JARs for all three modules.
+
+## SDK scope
+
+`pi-agent` targets headless JVM embedding. Planned extension support uses a native Java SPI for lifecycle hooks, tools, providers, commands exposed by a host, and durable extension state. Agent Skills remain file-format compatible with the Agent Skills standard. TypeScript extension loading and TUI-specific rendering are explicit non-goals.
 
 ## Modules
 
