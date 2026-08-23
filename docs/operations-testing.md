@@ -41,6 +41,8 @@ cross-machine comparisons invalid.
 | Manifest corruption/path traversal | Structured decoder validates version, root ownership, unique paths, size, hash, and normalized containment. |
 | Provider protocol compatibility | The pinned TypeScript 0.84.2 Anthropic, Google, Mistral, and Bedrock implementations run against deterministic mock transports to generate semantic requests, final wire payloads, frames, events, and terminal messages. Java codecs compare against the resulting versioned fixture. |
 | Java extension reload | A test compiles a real extension JAR with the JDK compiler, writes its ServiceLoader descriptor without shell tools, then verifies load/start/reload/start/close and exactly-once reverse shutdown. |
+| Headless extension orchestration | Resource, input, transition, compaction, model-change, provider middleware, and append-only durable state are tested for ordered chaining, short-circuiting, failure isolation, and session authority. |
+| Provider middleware transport | A real local Vert.x server verifies mutated headers and JSON payload on the wire and confirms response middleware runs before stream consumption. |
 | Skills portability and bounds | Discovery normalizes ordering across path separators, accepts UTF-8 BOM with LF/CRLF, limits depth/filesystem-entry count/skill size, and gates default project roots on host trust. |
 
 Disk-full and permission-denied behavior is expressed as `SessionError.Code.STORAGE`

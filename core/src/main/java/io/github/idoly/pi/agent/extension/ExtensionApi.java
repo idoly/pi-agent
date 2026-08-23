@@ -18,6 +18,8 @@ public interface ExtensionApi {
 
     void registerProvider(ModelProvider provider);
 
+    ExtensionStateStore state();
+
     void registerCommand(
             String name,
             String description,
@@ -25,6 +27,24 @@ public interface ExtensionApi {
     );
 
     void onSessionStart(ExtensionHooks.SessionHook hook);
+
+    void onResourcesDiscover(ExtensionHooks.ResourceDiscoveryHook hook);
+
+    void onInput(ExtensionHooks.InputHook hook);
+
+    void onSessionTransition(ExtensionHooks.SessionTransitionHook hook);
+
+    void onBeforeCompaction(ExtensionHooks.BeforeCompactionHook hook);
+
+    void onAfterCompaction(ExtensionHooks.AfterCompactionHook hook);
+
+    void onModelChange(ExtensionHooks.ModelChangeHook hook);
+
+    void onProviderHeaders(ExtensionHooks.ProviderHeadersHook hook);
+
+    void onProviderRequest(ExtensionHooks.ProviderRequestHook hook);
+
+    void onProviderResponse(ExtensionHooks.ProviderResponseHook hook);
 
     void onSessionShutdown(ExtensionHooks.SessionHook hook);
 

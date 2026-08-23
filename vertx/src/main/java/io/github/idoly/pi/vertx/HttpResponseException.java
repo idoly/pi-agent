@@ -10,7 +10,12 @@ public final class HttpResponseException extends RuntimeException {
     public HttpResponseException(int status, String reason, Map<String, List<String>> headers) {
         super("HTTP " + status + (reason == null || reason.isBlank() ? "" : " " + reason));
         this.status = status;
-        this.headers = Map.copyOf(headers);
+        java.util.LinkedHashMap<String, List<String>> copied =
+                new java.util.LinkedHashMap<>();
+        headers.forEach((name, values) -> copied.put(
+                name, values == null ? List.of() : List.copyOf(values)
+        ));
+        this.headers = Map.copyOf(copied);
     }
 
     public int status() {

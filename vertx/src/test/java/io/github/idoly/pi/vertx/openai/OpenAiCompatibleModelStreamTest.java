@@ -12,27 +12,44 @@ import io.github.idoly.pi.ai.AssistantStreamEvent;
 import io.github.idoly.pi.ai.CancellationSignal;
 import io.github.idoly.pi.ai.Model;
 import io.github.idoly.pi.ai.ModelContext;
+import io.github.idoly.pi.ai.ProviderRequestHooks;
 import io.github.idoly.pi.ai.StopReason;
 import io.github.idoly.pi.ai.StreamOptions;
 import io.github.idoly.pi.ai.TextContent;
 import io.github.idoly.pi.ai.UserMessage;
+import io.github.idoly.pi.vertx.HttpResponseException;
 import io.github.idoly.pi.vertx.VertxSseClientOptions;
 import io.github.idoly.pi.vertx.VertxSseHttpClient;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OpenAiCompatibleModelStreamTest {
+    static {
+        java.util.logging.Logger.getLogger(
+                "io.vertx.core.http.impl"
+        ).setLevel(java.util.logging.Level.OFF);
+        java.util.logging.Logger.getLogger(
+                "io.vertx.core.http.impl.HttpClientResponseImpl"
+        ).setLevel(java.util.logging.Level.OFF);
+    }
     private final ObjectMapper mapper = new ObjectMapper();
     private final AtomicReference<String> path = new AtomicReference<>();
     private final AtomicReference<String> authorization = new AtomicReference<>();
+    private final AtomicReference<String> requestHookHeader =
+            new AtomicReference<>();
     private final AtomicReference<JsonNode> requestBody = new AtomicReference<>();
     private Vertx vertx;
     private HttpServer server;
@@ -46,6 +63,7 @@ class OpenAiCompatibleModelStreamTest {
         server = vertx.createHttpServer().requestHandler(request -> request.body().onSuccess(body -> {
             path.set(request.path());
             authorization.set(request.getHeader("authorization"));
+            requestHookHeader.set(request.getHeader("x-request-hook"));
             try {
                 requestBody.set(mapper.readTree(body.getBytes()));
             } catch (Exception failure) {
@@ -54,7 +72,12 @@ class OpenAiCompatibleModelStreamTest {
             }
             var response = request.response()
                     .setChunked(true)
-                    .putHeader("content-type", "text/event-stream");
+                    .putHeader("content-type", "text/event-stream")
+                    .putHeader("x-response-hook", "seen");
+            if (request.getHeader("x-force-status") != null) {
+                response.setStatusCode(429).end("rate limited");
+                return;
+            }
             response.write("data: {\"choices\":[{\"delta\":{\"role\":\"assistant\","
                             + "\"content\":\"hel\"},\"finish_reason\":null}]}\n\n")
                     .compose(ignored -> response.write(
@@ -122,6 +145,105 @@ class OpenAiCompatibleModelStreamTest {
         assertEquals(5, doneEvent.message().usage().input());
         assertEquals(2, doneEvent.message().usage().output());
         assertEquals(7, doneEvent.message().usage().totalTokens());
+    }
+
+    @Test
+    void awaitsFrameworkNeutralRequestAndResponseHooks() {
+        ArrayList<String> order = new ArrayList<>();
+        ProviderRequestHooks hooks = new ProviderRequestHooks() {
+            @Override
+            public java.util.concurrent.CompletionStage<Map<String, String>>
+            beforeHeaders(
+                    Model model, Map<String, String> headers,
+                    CancellationSignal cancellation
+            ) {
+                order.add("headers");
+                LinkedHashMap<String, String> changed =
+                        new LinkedHashMap<>(headers);
+                changed.put("x-request-hook", "seen");
+                return CompletableFuture.completedFuture(changed);
+            }
+
+            @Override
+            @SuppressWarnings("unchecked")
+            public java.util.concurrent.CompletionStage<Object> beforeRequest(
+                    Model model, Object payload,
+                    CancellationSignal cancellation
+            ) {
+                order.add("request");
+                LinkedHashMap<String, Object> changed =
+                        new LinkedHashMap<>((Map<String, Object>) payload);
+                changed.put("extension_field", "value");
+                return CompletableFuture.completedFuture(changed);
+            }
+
+            @Override
+            public java.util.concurrent.CompletionStage<Void> afterResponse(
+                    Model model, int status,
+                    Map<String, List<String>> headers,
+                    CancellationSignal cancellation
+            ) {
+                order.add("response:" + status + ':'
+                        + headers.get("x-response-hook").getFirst());
+                return CompletableFuture.completedFuture(null);
+            }
+        };
+        Model model = new Model(
+                "fixture-model", "Fixture", "openai-completions", "local",
+                baseUrl, false, List.of("text"), 8_192, 1_024
+        );
+        StreamOptions options = new StreamOptions(
+                "session", "secret", "off", CancellationSignal.NONE,
+                Map.of(), hooks
+        );
+        List<AssistantStreamEvent> events = Multi.createFrom().publisher(
+                modelStream.stream(
+                        model,
+                        new ModelContext("system", List.of(
+                                UserMessage.text("hello", 1)
+                        )),
+                        options
+                )
+        ).collect().asList().await().atMost(Duration.ofSeconds(3));
+
+        assertEquals(List.of("headers", "request", "response:200:seen"), order);
+        assertEquals("seen", requestHookHeader.get());
+        assertEquals("value", requestBody.get().path("extension_field").asText());
+        assertInstanceOf(AssistantStreamEvent.Done.class, events.getLast());
+    }
+
+    @Test
+    void observesNonSuccessResponseBeforePreservingHttpFailure() {
+        AtomicReference<Integer> observed = new AtomicReference<>();
+        ProviderRequestHooks hooks = new ProviderRequestHooks() {
+            @Override
+            public java.util.concurrent.CompletionStage<Void> afterResponse(
+                    Model model, int status,
+                    Map<String, List<String>> headers,
+                    CancellationSignal cancellation
+            ) {
+                observed.set(status);
+                return CompletableFuture.completedFuture(null);
+            }
+        };
+        Model model = new Model(
+                "fixture-model", "Fixture", "openai-completions", "local",
+                baseUrl, false, List.of("text"), 8_192, 1_024
+        );
+        StreamOptions options = new StreamOptions(
+                null, "secret", "off", CancellationSignal.NONE,
+                Map.of("x-force-status", "yes"), hooks
+        );
+        assertThrows(HttpResponseException.class, () ->
+                Multi.createFrom().publisher(modelStream.stream(
+                        model,
+                        new ModelContext("", List.of(
+                                UserMessage.text("hello", 1)
+                        )),
+                        options
+                )).collect().asList().await().atMost(Duration.ofSeconds(3))
+        );
+        assertEquals(429, observed.get());
     }
 
     @Test

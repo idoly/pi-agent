@@ -11,7 +11,12 @@ import io.github.idoly.pi.agent.BeforeToolCallResult;
 import io.github.idoly.pi.agent.ContextTransformer;
 import io.github.idoly.pi.ai.AgentMessage;
 import io.github.idoly.pi.ai.ContentBlock;
+import io.github.idoly.pi.ai.Model;
+import io.github.idoly.pi.ai.ModelStream;
 import io.github.idoly.pi.ai.ProviderRegistry;
+import io.github.idoly.pi.ai.ProviderRequestHooks;
+import io.github.idoly.pi.agent.skill.SkillDiscoveryOptions;
+import io.github.idoly.pi.agent.skill.SkillRegistry;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -39,6 +44,24 @@ public final class ExtensionRuntime implements AutoCloseable {
             new ArrayList<>();
     private final ArrayList<Owned<ExtensionHooks.SessionHook>> sessionShutdowns =
             new ArrayList<>();
+    private final ArrayList<Owned<ExtensionHooks.ResourceDiscoveryHook>>
+            resourceDiscoveries = new ArrayList<>();
+    private final ArrayList<Owned<ExtensionHooks.InputHook>> inputs =
+            new ArrayList<>();
+    private final ArrayList<Owned<ExtensionHooks.SessionTransitionHook>>
+            sessionTransitions = new ArrayList<>();
+    private final ArrayList<Owned<ExtensionHooks.BeforeCompactionHook>>
+            beforeCompactions = new ArrayList<>();
+    private final ArrayList<Owned<ExtensionHooks.AfterCompactionHook>>
+            afterCompactions = new ArrayList<>();
+    private final ArrayList<Owned<ExtensionHooks.ModelChangeHook>> modelChanges =
+            new ArrayList<>();
+    private final ArrayList<Owned<ExtensionHooks.ProviderHeadersHook>>
+            providerHeaders = new ArrayList<>();
+    private final ArrayList<Owned<ExtensionHooks.ProviderRequestHook>>
+            providerRequests = new ArrayList<>();
+    private final ArrayList<Owned<ExtensionHooks.ProviderResponseHook>>
+            providerResponses = new ArrayList<>();
     private final ArrayList<Owned<ExtensionHooks.BeforeAgentStartHook>>
             beforeAgentStarts = new ArrayList<>();
     private final ArrayList<Owned<ExtensionHooks.AgentEventHook>> agentEvents =
@@ -181,6 +204,152 @@ public final class ExtensionRuntime implements AutoCloseable {
         return sessionLifecycle;
     }
 
+    public CompletionStage<ExtensionResources> discoverResources(
+            ExtensionResources.Reason reason
+    ) {
+        requireOpen();
+        Objects.requireNonNull(reason, "reason");
+        CompletionStage<ExtensionResources> stage =
+                CompletableFuture.completedFuture(ExtensionResources.EMPTY);
+        for (Owned<ExtensionHooks.ResourceDiscoveryHook> owned
+                : resourceDiscoveries) {
+            stage = stage.thenCompose(current -> passiveValue(
+                    owned,
+                    () -> owned.value().discover(reason, context)
+                            .thenApply(current::merge),
+                    current
+            ));
+        }
+        return stage;
+    }
+
+    public CompletionStage<SkillRegistry> discoverSkills(
+            SkillDiscoveryOptions options, ExtensionResources.Reason reason
+    ) {
+        Objects.requireNonNull(options, "options");
+        Objects.requireNonNull(reason, "reason");
+        return discoverResources(reason).thenApply(resources -> {
+            ArrayList<Path> explicit = new ArrayList<>(options.explicitPaths());
+            explicit.addAll(resources.skillPaths());
+            return SkillRegistry.discover(new SkillDiscoveryOptions(
+                    options.home(), options.cwd(), options.projectTrusted(),
+                    options.discoverDefaults(), explicit, options.packagePaths()
+            ));
+        });
+    }
+
+    public CompletionStage<ExtensionInputResult> processInput(
+            ExtensionInput input
+    ) {
+        requireOpen();
+        Objects.requireNonNull(input, "input");
+        CompletionStage<ExtensionInputResult> stage =
+                CompletableFuture.completedFuture(
+                        ExtensionInputResult.continueWith(input)
+                );
+        for (Owned<ExtensionHooks.InputHook> owned : inputs) {
+            stage = stage.thenCompose(current -> {
+                if (current.action() == ExtensionInputResult.Action.HANDLED) {
+                    return CompletableFuture.completedFuture(current);
+                }
+                ExtensionInput next = new ExtensionInput(
+                        current.text(), current.images(), input.source()
+                );
+                return passiveValue(
+                        owned,
+                        () -> owned.value().handle(next, context)
+                                .thenApply(value -> mergeInputResult(
+                                        current, value
+                                )),
+                        current
+                );
+            });
+        }
+        return stage;
+    }
+
+    private static ExtensionInputResult mergeInputResult(
+            ExtensionInputResult current,
+            ExtensionInputResult next
+    ) {
+        if (next == null) return current;
+        if (current.action() == ExtensionInputResult.Action.TRANSFORM
+                && next.action() == ExtensionInputResult.Action.CONTINUE) {
+            return ExtensionInputResult.transform(
+                    next.text(), next.images()
+            );
+        }
+        return next;
+    }
+
+    public CompletionStage<SessionTransitionResult> beforeSessionTransition(
+            SessionTransition transition
+    ) {
+        requireOpen();
+        Objects.requireNonNull(transition, "transition");
+        CompletionStage<SessionTransitionResult> stage =
+                CompletableFuture.completedFuture(
+                        SessionTransitionResult.allow()
+                );
+        for (Owned<ExtensionHooks.SessionTransitionHook> owned
+                : sessionTransitions) {
+            stage = stage.thenCompose(current -> current.cancel()
+                    ? CompletableFuture.completedFuture(current)
+                    : passiveValue(
+                            owned,
+                            () -> owned.value().before(transition, context)
+                                    .thenApply(value -> value == null
+                                            ? current : value),
+                            current
+                    ));
+        }
+        return stage;
+    }
+
+    public CompletionStage<BeforeCompactionResult> beforeCompaction(
+            ExtensionCompaction compaction
+    ) {
+        requireOpen();
+        Objects.requireNonNull(compaction, "compaction");
+        CompletionStage<BeforeCompactionResult> stage =
+                CompletableFuture.completedFuture(
+                        BeforeCompactionResult.proceed()
+                );
+        for (Owned<ExtensionHooks.BeforeCompactionHook> owned
+                : beforeCompactions) {
+            stage = stage.thenCompose(current ->
+                    current.cancel() || current.replacement() != null
+                            ? CompletableFuture.completedFuture(current)
+                            : passiveValue(
+                                    owned,
+                                    () -> owned.value().before(
+                                            compaction, context
+                                    ).thenApply(value -> value == null
+                                            ? current : value),
+                                    current
+                            ));
+        }
+        return stage;
+    }
+
+    public CompletionStage<Void> afterCompaction(
+            ExtensionCompaction compaction
+    ) {
+        requireOpen();
+        Objects.requireNonNull(compaction, "compaction");
+        return runPassive(afterCompactions, hook ->
+                hook.after(compaction, context));
+    }
+
+    public CompletionStage<Void> modelChanged(
+            ExtensionModelChange change
+    ) {
+        requireOpen();
+        Objects.requireNonNull(change, "change");
+        return runPassive(modelChanges, hook ->
+                hook.changed(change, context));
+    }
+
     public ExtensionAgent createExtensionAgent(AgentOptions options) {
         Agent agent = createAgent(options);
         return new ExtensionAgent(
@@ -229,6 +398,13 @@ public final class ExtensionRuntime implements AutoCloseable {
         List<AgentTool> combinedTools = activeTools(
                 mergeTools(options.tools(), tools)
         );
+        ModelStream modelStream = (model, modelContext, streamOptions) ->
+                options.modelStream().stream(
+                        model, modelContext,
+                        streamOptions.withRequestHooks(providerHooks(
+                                streamOptions.requestHooks()
+                        ))
+                );
         ContextTransformer contextTransformer = composeContext(
                 options.contextTransformer()
         );
@@ -236,7 +412,7 @@ public final class ExtensionRuntime implements AutoCloseable {
         AfterToolCall afterToolCall = composeAfter(options.afterToolCall());
         return new AgentOptions(
                 options.systemPrompt(), options.model(), options.thinkingLevel(),
-                options.sessionId(), options.modelStream(),
+                options.sessionId(), modelStream,
                 options.contextConverter(), contextTransformer,
                 options.apiKeyResolver(), combinedTools, options.toolExecution(),
                 options.steeringMode(), options.followUpMode(), beforeToolCall,
@@ -244,6 +420,72 @@ public final class ExtensionRuntime implements AutoCloseable {
                 options.shouldStopAfterTurn(), options.steeringMessages(),
                 options.followUpMessages()
         );
+    }
+
+    private ProviderRequestHooks providerHooks(ProviderRequestHooks existing) {
+        return new ProviderRequestHooks() {
+            @Override
+            public CompletionStage<Map<String, String>> beforeHeaders(
+                    Model model, Map<String, String> headers,
+                    io.github.idoly.pi.ai.CancellationSignal cancellation
+            ) {
+                CompletionStage<Map<String, String>> stage =
+                        existing.beforeHeaders(model, headers, cancellation);
+                for (Owned<ExtensionHooks.ProviderHeadersHook> owned
+                        : providerHeaders) {
+                    stage = stage.thenCompose(current -> passiveValue(
+                            owned,
+                            () -> owned.value().transform(
+                                    model, current,
+                                    context.withCancellation(cancellation)
+                            ).thenApply(value -> value == null
+                                    ? current : value),
+                            current
+                    ));
+                }
+                return stage.thenApply(Map::copyOf);
+            }
+
+            @Override
+            public CompletionStage<Object> beforeRequest(
+                    Model model, Object payload,
+                    io.github.idoly.pi.ai.CancellationSignal cancellation
+            ) {
+                CompletionStage<Object> stage = existing.beforeRequest(
+                        model, payload, cancellation
+                );
+                for (Owned<ExtensionHooks.ProviderRequestHook> owned
+                        : providerRequests) {
+                    stage = stage.thenCompose(current -> passiveValue(
+                            owned,
+                            () -> owned.value().transform(
+                                    model, current,
+                                    context.withCancellation(cancellation)
+                            ).thenApply(value -> value == null
+                                    ? current : value),
+                            current
+                    ));
+                }
+                return stage;
+            }
+
+            @Override
+            public CompletionStage<Void> afterResponse(
+                    Model model, int status,
+                    Map<String, List<String>> headers,
+                    io.github.idoly.pi.ai.CancellationSignal cancellation
+            ) {
+                return existing.afterResponse(
+                        model, status, headers, cancellation
+                ).thenCompose(ignored -> runPassive(
+                        providerResponses,
+                        hook -> hook.handle(
+                                model, status, headers,
+                                context.withCancellation(cancellation)
+                        )
+                ));
+            }
+        };
     }
 
     private ContextTransformer composeContext(ContextTransformer existing) {
@@ -444,6 +686,9 @@ public final class ExtensionRuntime implements AutoCloseable {
             @Override public void registerProvider(
                     io.github.idoly.pi.ai.ModelProvider provider
             ) { providers.register(provider); }
+            @Override public ExtensionStateStore state() {
+                return new ExtensionStateStore(id, context.session());
+            }
             @Override public void registerCommand(
                     String name, String description,
                     ExtensionCommand.Handler handler
@@ -462,6 +707,33 @@ public final class ExtensionRuntime implements AutoCloseable {
             @Override public void onSessionShutdown(
                     ExtensionHooks.SessionHook hook
             ) { sessionShutdowns.add(new Owned<>(id, hook)); }
+            @Override public void onResourcesDiscover(
+                    ExtensionHooks.ResourceDiscoveryHook hook
+            ) { resourceDiscoveries.add(new Owned<>(id, hook)); }
+            @Override public void onInput(
+                    ExtensionHooks.InputHook hook
+            ) { inputs.add(new Owned<>(id, hook)); }
+            @Override public void onSessionTransition(
+                    ExtensionHooks.SessionTransitionHook hook
+            ) { sessionTransitions.add(new Owned<>(id, hook)); }
+            @Override public void onBeforeCompaction(
+                    ExtensionHooks.BeforeCompactionHook hook
+            ) { beforeCompactions.add(new Owned<>(id, hook)); }
+            @Override public void onAfterCompaction(
+                    ExtensionHooks.AfterCompactionHook hook
+            ) { afterCompactions.add(new Owned<>(id, hook)); }
+            @Override public void onModelChange(
+                    ExtensionHooks.ModelChangeHook hook
+            ) { modelChanges.add(new Owned<>(id, hook)); }
+            @Override public void onProviderHeaders(
+                    ExtensionHooks.ProviderHeadersHook hook
+            ) { providerHeaders.add(new Owned<>(id, hook)); }
+            @Override public void onProviderRequest(
+                    ExtensionHooks.ProviderRequestHook hook
+            ) { providerRequests.add(new Owned<>(id, hook)); }
+            @Override public void onProviderResponse(
+                    ExtensionHooks.ProviderResponseHook hook
+            ) { providerResponses.add(new Owned<>(id, hook)); }
             @Override public void onBeforeAgentStart(
                     ExtensionHooks.BeforeAgentStartHook hook
             ) { beforeAgentStarts.add(new Owned<>(id, hook)); }

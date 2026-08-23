@@ -3,6 +3,7 @@ package io.github.idoly.pi.vertx.anthropic;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.idoly.pi.ai.*;
+import io.github.idoly.pi.vertx.internal.ProviderHttpHooks;
 import io.github.idoly.pi.vertx.SseHttpRequest;
 import io.github.idoly.pi.vertx.VertxSseHttpClient;
 import io.smallrye.mutiny.Multi;
@@ -90,20 +91,27 @@ public final class AnthropicMessagesModelStream
                     "anthropic-beta", "interleaved-thinking-2025-05-14"
             );
         }
-        byte[] body;
-        try {
-            body = mapper.writeValueAsBytes(codec.encodeRequest(
-                    model, context, options.thinkingLevel()
-            ));
-        } catch (JsonProcessingException failure) {
-            return Multi.createFrom().failure(failure);
-        }
-        return transport.execute(
-                SseHttpRequest.post(messagesUri(model.baseUrl()), headers, body),
-                options.cancellation()
-        ).toMulti().onItem().transformToMultiAndConcatenate(response ->
-                codec.decode(response.events(), model)
-        );
+        return ProviderHttpHooks.prepare(
+                mapper, model,
+                codec.encodeRequest(model, context, options.thinkingLevel()),
+                headers, options
+        ).toMulti().onItem().transformToMultiAndConcatenate(prepared -> {
+            byte[] body;
+            try {
+                body = mapper.writeValueAsBytes(prepared.payload());
+            } catch (JsonProcessingException failure) {
+                return Multi.createFrom().failure(failure);
+            }
+            return ProviderHttpHooks.observeSse(transport.execute(
+                    SseHttpRequest.post(
+                            messagesUri(model.baseUrl()), prepared.headers(), body
+                    ),
+                    options.cancellation()
+            ), model, options).toMulti()
+                    .onItem().transformToMultiAndConcatenate(response ->
+                            codec.decode(response.events(), model)
+                    );
+        });
     }
 
     static URI messagesUri(String baseUrl) {

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.idoly.pi.ai.*;
+import io.github.idoly.pi.vertx.internal.ProviderHttpHooks;
 import io.github.idoly.pi.vertx.SseHttpRequest;
 import io.github.idoly.pi.vertx.VertxSseHttpClient;
 import io.github.idoly.pi.vertx.openai.OpenAiChatCodec;
@@ -80,18 +81,25 @@ public final class MistralConversationsModelStream
         if (options.sessionId() != null && !options.sessionId().isBlank()) {
             headers.put("x-affinity", options.sessionId());
         }
-        byte[] body;
-        try {
-            body = mapper.writeValueAsBytes(request);
-        } catch (JsonProcessingException failure) {
-            return Multi.createFrom().failure(failure);
-        }
-        return transport.execute(
-                SseHttpRequest.post(uri(model.baseUrl()), headers, body),
-                options.cancellation()
-        ).toMulti().onItem().transformToMultiAndConcatenate(response ->
-                codec.decode(response.events(), model)
-        );
+        return ProviderHttpHooks.prepare(
+                mapper, model, request, headers, options
+        ).toMulti().onItem().transformToMultiAndConcatenate(prepared -> {
+            byte[] body;
+            try {
+                body = mapper.writeValueAsBytes(prepared.payload());
+            } catch (JsonProcessingException failure) {
+                return Multi.createFrom().failure(failure);
+            }
+            return ProviderHttpHooks.observeSse(transport.execute(
+                    SseHttpRequest.post(
+                            uri(model.baseUrl()), prepared.headers(), body
+                    ),
+                    options.cancellation()
+            ), model, options).toMulti()
+                    .onItem().transformToMultiAndConcatenate(response ->
+                            codec.decode(response.events(), model)
+                    );
+        });
     }
 
     ObjectNode encodeRequest(

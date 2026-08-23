@@ -9,6 +9,7 @@ import io.github.idoly.pi.ai.Model;
 import io.github.idoly.pi.ai.ModelContext;
 import io.github.idoly.pi.ai.ModelStream;
 import io.github.idoly.pi.ai.StreamOptions;
+import io.github.idoly.pi.vertx.internal.ProviderHttpHooks;
 import io.github.idoly.pi.vertx.SseHttpRequest;
 import io.github.idoly.pi.vertx.VertxSseHttpClient;
 
@@ -76,28 +77,38 @@ public final class OpenAiResponsesModelStream implements ModelStream, AutoClosea
         if (sessionId != null && !sessionId.isBlank()) {
             headers.putAll(sessionAffinityHeaders(model, compatibility, sessionId));
         }
-        Map<String, OpenAiGrammar.Grammar> grammars;
-        byte[] body;
-        try {
-            grammars = OpenAiGrammar.resolveAll(
-                    mapper, context.tools(), compatibility.supportsGrammarTools()
-            );
-            ObjectNode request = codec.encodeRequest(model, context, options.thinkingLevel());
-            if (sessionId != null && !sessionId.isBlank()) {
-                request.put("prompt_cache_key", sessionId.substring(0, Math.min(64, sessionId.length())));
-            }
-            body = mapper.writeValueAsBytes(request);
-        } catch (JsonProcessingException failure) {
-            return Multi.createFrom().failure(failure);
-        }
-        SseHttpRequest request = SseHttpRequest.post(
-                responsesUri(model.baseUrl()), headers, body
+        Map<String, OpenAiGrammar.Grammar> grammars = OpenAiGrammar.resolveAll(
+                mapper, context.tools(), compatibility.supportsGrammarTools()
         );
-        return transport.execute(request, options.cancellation())
-                .toMulti()
-                .onItem().transformToMultiAndConcatenate(response ->
-                        codec.decode(response.events(), model, grammars)
-                );
+        ObjectNode request = codec.encodeRequest(
+                model, context, options.thinkingLevel()
+        );
+        if (sessionId != null && !sessionId.isBlank()) {
+            request.put(
+                    "prompt_cache_key",
+                    sessionId.substring(0, Math.min(64, sessionId.length()))
+            );
+        }
+        return ProviderHttpHooks.prepare(
+                mapper, model, request, headers, options
+        ).toMulti().onItem().transformToMultiAndConcatenate(prepared -> {
+            byte[] body;
+            try {
+                body = mapper.writeValueAsBytes(prepared.payload());
+            } catch (JsonProcessingException failure) {
+                return Multi.createFrom().failure(failure);
+            }
+            SseHttpRequest httpRequest = SseHttpRequest.post(
+                    responsesUri(model.baseUrl()), prepared.headers(), body
+            );
+            return ProviderHttpHooks.observeSse(
+                    transport.execute(httpRequest, options.cancellation()),
+                    model, options
+            ).toMulti()
+                    .onItem().transformToMultiAndConcatenate(response ->
+                            codec.decode(response.events(), model, grammars)
+                    );
+        });
     }
 
     static Map<String, String> sessionAffinityHeaders(

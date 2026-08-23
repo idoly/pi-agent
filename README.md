@@ -54,6 +54,7 @@ The build attaches binary, source, and Javadoc JARs for all three modules.
 - OpenAI-compatible Chat Completions request, text/tool-call stream, usage, and error codec.
 - OpenAI Responses request and stream codec with encrypted reasoning replay, tool-result images, cache affinity, terminal metadata, and composite tool-call IDs.
 - Unified `VertxModelProviders` routing for OpenAI Chat/Responses, Anthropic Messages, Google AI Studio/Vertex, Amazon Bedrock ConverseStream, and Mistral Conversations over one shared Vert.x connection pool.
+- Awaited framework-neutral provider header/payload/response middleware with no Jackson or Vert.x types in Core.
 - OpenAI Chat/Responses response IDs, raw stop reasons, reasoning-token usage, and differential terminal-error behavior.
 - Structured Chat `reasoning_details` signature preservation and stateless replay.
 - Protection against executing tool arguments from a length-truncated assistant response.
@@ -102,6 +103,7 @@ var result = RecoveryCheckpointVerifier.verify(
 - [使用手册](docs/user-guide.md)
 - [Architecture](docs/architecture.md)
 - [API stability](docs/api-stability.md)
+- [Upstream capability matrix](docs/upstream-capability-matrix.md)
 - [Global write barrier decision](docs/global-write-barrier.md)
 - [Operations testing and recovery benchmark](docs/operations-testing.md)
 - [Releasing](docs/releasing.md)

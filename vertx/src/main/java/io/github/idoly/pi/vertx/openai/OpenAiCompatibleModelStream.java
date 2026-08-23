@@ -8,6 +8,7 @@ import io.github.idoly.pi.ai.Model;
 import io.github.idoly.pi.ai.ModelContext;
 import io.github.idoly.pi.ai.ModelStream;
 import io.github.idoly.pi.ai.StreamOptions;
+import io.github.idoly.pi.vertx.internal.ProviderHttpHooks;
 import io.github.idoly.pi.vertx.SseHttpRequest;
 import io.github.idoly.pi.vertx.VertxSseHttpClient;
 
@@ -73,26 +74,32 @@ public final class OpenAiCompatibleModelStream implements ModelStream, AutoClose
         if (options.apiKey() != null && !options.apiKey().isBlank()) {
             headers.put("authorization", "Bearer " + options.apiKey());
         }
-        Map<String, OpenAiGrammar.Grammar> grammars;
-        byte[] body;
-        try {
-            grammars = OpenAiGrammar.resolveAll(
-                    mapper, context.tools(), compatibility.supportsGrammarTools()
-            );
-            body = mapper.writeValueAsBytes(codec.encodeRequest(
-                    model, context, options.thinkingLevel()
-            ));
-        } catch (JsonProcessingException failure) {
-            return Multi.createFrom().failure(failure);
-        }
-        SseHttpRequest request = SseHttpRequest.post(
-                chatCompletionsUri(model.baseUrl()), headers, body
+        Map<String, OpenAiGrammar.Grammar> grammars = OpenAiGrammar.resolveAll(
+                mapper, context.tools(), compatibility.supportsGrammarTools()
         );
-        return transport.execute(request, options.cancellation())
-                .toMulti()
-                .onItem().transformToMultiAndConcatenate(response ->
-                        codec.decode(response.events(), model, grammars)
-                );
+        return ProviderHttpHooks.prepare(
+                mapper, model,
+                codec.encodeRequest(model, context, options.thinkingLevel()),
+                headers, options
+        ).toMulti().onItem().transformToMultiAndConcatenate(prepared -> {
+            byte[] body;
+            try {
+                body = mapper.writeValueAsBytes(prepared.payload());
+            } catch (JsonProcessingException failure) {
+                return Multi.createFrom().failure(failure);
+            }
+            SseHttpRequest request = SseHttpRequest.post(
+                    chatCompletionsUri(model.baseUrl()),
+                    prepared.headers(), body
+            );
+            return ProviderHttpHooks.observeSse(
+                    transport.execute(request, options.cancellation()),
+                    model, options
+            ).toMulti()
+                    .onItem().transformToMultiAndConcatenate(response ->
+                            codec.decode(response.events(), model, grammars)
+                    );
+        });
     }
 
     static URI chatCompletionsUri(String baseUrl) {

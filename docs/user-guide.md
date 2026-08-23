@@ -877,9 +877,76 @@ Java SPI与上游coding-agent extension事件面的对应边界：
 | Tools、动态active tools、providers、commands、event bus | 内置 |
 | Durable state | 通过`ExtensionContext.session()`和session API |
 | Project trust决策、命令分发、session switch/fork/compaction | 由嵌入SDK的host编排 |
-| Provider wire payload/header/response hooks | 当前不属于Core `ModelStream`边界 |
+| Provider wire payload/header/response hooks | 内置，使用JDK JSON value和不可变maps，不泄漏Jackson/Vert.x |
 | Dialog、shortcut、flag、renderer、theme、editor、overlay | TUI/CLI专属，不实现 |
 | TypeScript加载和Node兼容 | 不实现，extension必须重写为Java |
+
+Headless host hooks示例：
+
+```java
+api.onResourcesDiscover((reason, context) ->
+        CompletableFuture.completedFuture(
+                new ExtensionResources(List.of(
+                        context.cwd().resolve("extension-skills")
+                ))
+        )
+);
+api.onInput((input, context) -> CompletableFuture.completedFuture(
+        input.text().startsWith("?quick ")
+                ? ExtensionInputResult.transform(
+                        "Respond briefly: " + input.text().substring(7),
+                        input.images()
+                )
+                : ExtensionInputResult.continueWith(input)
+));
+api.onSessionTransition((transition, context) ->
+        CompletableFuture.completedFuture(
+                SessionTransitionResult.allow()
+                // 或SessionTransitionResult.cancel("Working tree is dirty")
+        )
+);
+api.onBeforeCompaction((compaction, context) ->
+        CompletableFuture.completedFuture(
+                BeforeCompactionResult.proceed()
+        )
+);
+api.onModelChange((change, context) ->
+        CompletableFuture.completedFuture(null)
+);
+```
+
+Host必须显式调用`processInput(...)`、`beforeSessionTransition(...)`、`beforeCompaction(...)`和`modelChanged(...)`；SDK不会假设应用的命令语法或session replacement工作流。`discoverSkills(options, ExtensionResources.Reason.STARTUP)`会把extension贡献的Skill paths加入现有trust-aware发现流程；reload使用`Reason.RELOAD`。
+
+Provider hooks通过`ExtensionAgent`或`runtime.applyTo(agentOptions)`自动写入`StreamOptions`；内置Vert.x providers会执行它们，自定义`ModelStream`必须显式遵守`ProviderRequestHooks`契约：
+
+```java
+api.onProviderHeaders((model, headers, context) -> {
+    Map<String, String> changed = new LinkedHashMap<>(headers);
+    changed.put("x-session-owner", api.extensionId());
+    return CompletableFuture.completedFuture(changed);
+});
+api.onProviderRequest((model, payload, context) -> {
+    // Root必须是Map；嵌套值只能是Map/List/JSON scalar/null。
+    return CompletableFuture.completedFuture(payload);
+});
+api.onProviderResponse((model, status, headers, context) ->
+        CompletableFuture.completedFuture(null)
+);
+```
+
+Header和payload hooks在HTTP请求前按extension顺序await；response hooks在开始消费SSE或Bedrock binary stream前await；非2xx响应也会先通知hook，再保留原`HttpResponseException`。普通extension hook异常记录到`runtime.failures()`并保留当前headers/payload。Bedrock SigV4在header/payload hooks完成后计算；SigV4路径会忽略extension提供的`authorization`、`host`和`x-amz-*`字段，再生成一致签名。
+
+Durable extension state复用session custom entries，JSONL仍是唯一authority：
+
+```java
+ExtensionStateStore state = api.state();
+state.put("settings", objectMapper.valueToTree(Map.of("enabled", true)))
+        .toCompletableFuture().join();
+JsonNode latest = state.get("settings").toCompletableFuture().join()
+        .orElseThrow();
+```
+
+没有`AgentSession`的ephemeral host调用会明确失败。State是append-only history；`get`返回最新值，`history`按newest-first读取。Key长度为1到128字符。
 
 ## 20. Agent Skills
 
@@ -968,6 +1035,7 @@ for (ProviderDefinition definition : configuration.providers()) {
 
 - [架构](architecture.md)
 - [API稳定度](api-stability.md)
+- [上游能力对照矩阵](upstream-capability-matrix.md)
 - [运维测试](operations-testing.md)
 - [Global write barrier决策](global-write-barrier.md)
 - [发布](releasing.md)

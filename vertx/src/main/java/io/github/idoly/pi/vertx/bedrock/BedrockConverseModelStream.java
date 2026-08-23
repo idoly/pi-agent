@@ -3,6 +3,7 @@ package io.github.idoly.pi.vertx.bedrock;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.idoly.pi.ai.*;
+import io.github.idoly.pi.vertx.internal.ProviderHttpHooks;
 import io.github.idoly.pi.vertx.SseHttpRequest;
 import io.github.idoly.pi.vertx.VertxSseHttpClient;
 import io.smallrye.mutiny.Multi;
@@ -78,14 +79,6 @@ public final class BedrockConverseModelStream
                     "Unsupported Bedrock API " + model.api()
             ));
         }
-        byte[] body;
-        try {
-            body = mapper.writeValueAsBytes(codec.encodeRequest(
-                    model, context, options.thinkingLevel()
-            ));
-        } catch (JsonProcessingException failure) {
-            return Multi.createFrom().failure(failure);
-        }
         URI uri = uri(model);
         LinkedHashMap<String, String> headers = new LinkedHashMap<>();
         options.headers().forEach((name, value) -> {
@@ -101,30 +94,53 @@ public final class BedrockConverseModelStream
         if (bearer == null || bearer.isBlank()) {
             bearer = System.getenv("AWS_BEARER_TOKEN_BEDROCK");
         }
-        if (bearer != null && !bearer.isBlank()) {
+        boolean bearerAuth = bearer != null && !bearer.isBlank();
+        if (bearerAuth) {
             headers.put("authorization", "Bearer " + bearer);
-        } else {
-            AwsCredentials resolved = credentials.resolve();
-            if (resolved == null) {
-                return Multi.createFrom().failure(new IllegalArgumentException(
-                        "No AWS credentials or Bedrock bearer token"
-                ));
-            }
-            headers.put("content-type", "application/json");
-            headers.put("accept", "application/vnd.amazon.eventstream");
-            Map<String, String> unsigned = Map.copyOf(headers);
-            headers.clear();
-            headers.putAll(AwsSigV4.sign(
-                    uri, "POST", body, unsigned,
-                    region(model), "bedrock", resolved, clock
-            ));
         }
-        return transport.executeBinary(
-                SseHttpRequest.post(uri, headers, body),
-                options.cancellation()
-        ).toMulti().onItem().transformToMultiAndConcatenate(response ->
-                codec.decode(response.chunks(), model)
-        );
+        return ProviderHttpHooks.prepare(
+                mapper, model,
+                codec.encodeRequest(model, context, options.thinkingLevel()),
+                headers, options
+        ).toMulti().onItem().transformToMultiAndConcatenate(prepared -> {
+            byte[] body;
+            try {
+                body = mapper.writeValueAsBytes(prepared.payload());
+            } catch (JsonProcessingException failure) {
+                return Multi.createFrom().failure(failure);
+            }
+            Map<String, String> effectiveHeaders = prepared.headers();
+            if (!bearerAuth) {
+                AwsCredentials resolved = credentials.resolve();
+                if (resolved == null) {
+                    return Multi.createFrom().failure(
+                            new IllegalArgumentException(
+                                    "No AWS credentials or Bedrock bearer token"
+                            )
+                    );
+                }
+                LinkedHashMap<String, String> unsigned = new LinkedHashMap<>();
+                effectiveHeaders.forEach((name, value) -> {
+                    String lower = name.toLowerCase(java.util.Locale.ROOT);
+                    if (!lower.equals("authorization")
+                            && !lower.equals("host")
+                            && !lower.startsWith("x-amz-")) {
+                        unsigned.put(name, value);
+                    }
+                });
+                effectiveHeaders = AwsSigV4.sign(
+                        uri, "POST", body, unsigned,
+                        region(model), "bedrock", resolved, clock
+                );
+            }
+            return ProviderHttpHooks.observeBinary(transport.executeBinary(
+                    SseHttpRequest.post(uri, effectiveHeaders, body),
+                    options.cancellation()
+            ), model, options).toMulti()
+                    .onItem().transformToMultiAndConcatenate(response ->
+                            codec.decode(response.chunks(), model)
+                    );
+        });
     }
 
     static URI uri(Model model) {
