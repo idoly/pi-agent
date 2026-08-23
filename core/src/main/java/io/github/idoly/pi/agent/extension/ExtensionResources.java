@@ -3,6 +3,7 @@ package io.github.idoly.pi.agent.extension;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /** Headless resources contributed by extensions during discovery. */
 public record ExtensionResources(List<Path> skillPaths) {
@@ -10,7 +11,9 @@ public record ExtensionResources(List<Path> skillPaths) {
 
     public ExtensionResources {
         skillPaths = skillPaths == null ? List.of() : skillPaths.stream()
-                .map(path -> path.toAbsolutePath().normalize()).toList();
+                .map(path -> Objects.requireNonNull(path, "skill path")
+                        .toAbsolutePath().normalize())
+                .toList();
     }
 
     public ExtensionResources merge(ExtensionResources other) {

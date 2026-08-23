@@ -1,5 +1,32 @@
 # Operations testing
 
+## Provider live tests
+
+Live Provider tests are disabled by default and never run during ordinary
+`test`, `package`, or `verify` lifecycles. Enable them explicitly:
+
+```bash
+mvn -Pprovider-live-tests -pl vertx -am verify
+```
+
+Each test is skipped unless its credential environment is present. These tests
+send a real prompt and may incur Provider charges. Defaults select a small
+catalog model; override them when the account does not expose that model.
+
+| Provider | Required environment | Optional model override |
+| --- | --- | --- |
+| OpenAI | `OPENAI_API_KEY` | `PI_LIVE_OPENAI_MODEL` |
+| Anthropic | `ANTHROPIC_API_KEY` | `PI_LIVE_ANTHROPIC_MODEL` |
+| Google AI Studio | `GOOGLE_API_KEY` | `PI_LIVE_GOOGLE_MODEL` |
+| Google Vertex | `GOOGLE_VERTEX_ACCESS_TOKEN`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | `PI_LIVE_VERTEX_MODEL` |
+| Mistral | `MISTRAL_API_KEY` | `PI_LIVE_MISTRAL_MODEL` |
+| Bedrock | `AWS_BEARER_TOKEN_BEDROCK`, or environment access/secret keys | `PI_LIVE_BEDROCK_MODEL`, `AWS_REGION` |
+| Local OpenAI-compatible | `PI_LIVE_OPENAI_COMPAT_BASE_URL`, `PI_LIVE_OPENAI_COMPAT_MODEL` | `PI_LIVE_OPENAI_COMPAT_API_KEY` |
+
+The suite requires a terminal `Done` event with non-empty text and rejects
+terminal error events. A skipped run validates profile wiring but is not proof
+of service compatibility. CI deliberately supplies no cloud credentials.
+
 ## Recovery trend benchmark
 
 Run the bounded recovery scenario on a quiet Linux host:
@@ -43,6 +70,7 @@ cross-machine comparisons invalid.
 | Java extension reload | A test compiles a real extension JAR with the JDK compiler, writes its ServiceLoader descriptor without shell tools, then verifies load/start/reload/start/close and exactly-once reverse shutdown. |
 | Headless extension orchestration | Resource, input, transition, compaction, model-change, provider middleware, and append-only durable state are tested for ordered chaining, short-circuiting, failure isolation, and session authority. |
 | Provider middleware transport | A real local Vert.x server verifies mutated headers and JSON payload on the wire and confirms response middleware runs before stream consumption. |
+| Credentialed Provider services | Opt-in Failsafe tests cover OpenAI, Anthropic, Google AI Studio/Vertex, Mistral, Bedrock, and a local OpenAI-compatible endpoint; absent credentials produce explicit skips. |
 | Skills portability and bounds | Discovery normalizes ordering across path separators, accepts UTF-8 BOM with LF/CRLF, limits depth/filesystem-entry count/skill size, and gates default project roots on host trust. |
 
 Disk-full and permission-denied behavior is expressed as `SessionError.Code.STORAGE`

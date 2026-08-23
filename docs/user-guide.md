@@ -12,7 +12,7 @@ SDK定位为headless JVM runtime。未来extensions使用原生Java SPI，不直
 | --- | --- |
 | `pi-agent-ai` | 模型、消息、内容块、usage、stream event和`ModelStream`协议 |
 | `pi-agent-core` | Agent loop、工具、队列、session、JSONL persistence和durable operations |
-| `pi-agent-vertx` | Vert.x HTTP/1.1/HTTP/2 SSE transport、OpenAI Chat/Responses和model catalog |
+| `pi-agent-vertx` | 共享Vert.x transport、统一model catalog及OpenAI、Anthropic、Google/Vertex、Mistral、Bedrock协议 |
 
 典型OpenAI应用只需要直接依赖core和vertx；它们会传递引入ai：
 
@@ -959,7 +959,14 @@ SkillRegistry skills = SkillRegistry.discover(
 );
 String systemPrompt = skills.contributeToSystemPrompt(basePrompt);
 String invoked = skills.invoke("pdf-tools", "extract report.pdf");
+
+SkillCommandDispatcher dispatcher = new SkillCommandDispatcher(skills);
+SkillInvocation invocation = dispatcher
+        .dispatch("/skill:pdf-tools extract report.pdf")
+        .orElseThrow();
 ```
+
+`SkillInvocation`同时提供完整prompt、source、scope和`allowedTools`。Host必须先根据自己的权限策略解释并授权`allowedTools`，再把prompt交给Agent；SDK不会把frontmatter中的字符串自动提升为工具权限。`dispatcher.commands()`可直接用于headless command palette metadata。Extension command、Skill command、session replacement和compaction的完整host编排见[`examples/HeadlessExtensionHost.java`](../examples/HeadlessExtensionHost.java)。
 
 支持：
 
@@ -1030,6 +1037,8 @@ for (ProviderDefinition definition : configuration.providers()) {
 ```
 
 默认resolver支持`$ENV_VAR`、`${ENV_VAR}`、`$$`和`$!`。出于安全原因，`!command`必须通过应用显式提供的`ConfigValueResolver`执行。
+
+真实服务smoke tests默认关闭。运行`mvn -Pprovider-live-tests -pl vertx -am verify`前，先按[运维测试](operations-testing.md#provider-live-tests)配置credential和model overrides；该profile会产生真实Provider调用和可能的费用。
 
 ## 22. 相关文档
 

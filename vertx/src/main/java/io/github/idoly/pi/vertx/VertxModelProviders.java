@@ -152,13 +152,17 @@ public final class VertxModelProviders implements ModelStream, AutoCloseable {
                 CompletionStage<Map<String, String>> headers =
                         resolveHeaders(definition.headers(), resolver);
                 return io.smallrye.mutiny.Uni.createFrom()
-                        .completionStage(key.thenCombine(headers, (apiKey, resolved) ->
-                                new StreamOptions(
-                                        options.sessionId(), apiKey,
-                                        options.thinkingLevel(),
-                                        options.cancellation(), resolved
-                                )
-                        )).toMulti().onItem().transformToMultiAndConcatenate(
+                        .completionStage(key.thenCombine(headers, (apiKey, resolved) -> {
+                            LinkedHashMap<String, String> effectiveHeaders =
+                                    new LinkedHashMap<>(resolved);
+                            effectiveHeaders.putAll(options.headers());
+                            return new StreamOptions(
+                                    options.sessionId(), apiKey,
+                                    options.thinkingLevel(),
+                                    options.cancellation(), effectiveHeaders,
+                                    options.requestHooks()
+                            );
+                        })).toMulti().onItem().transformToMultiAndConcatenate(
                                 effective -> io.smallrye.mutiny.Multi.createFrom()
                                         .publisher(protocol.stream(
                                                 model, context, effective

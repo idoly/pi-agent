@@ -26,7 +26,7 @@ Status meanings:
 | Google AI Studio/Vertex | `COMPATIBLE` | `GoogleGenerativeModelStream` | Upstream protocol fixture |
 | Mistral Conversations | `COMPATIBLE` | `MistralConversationsModelStream` | Final wire payload fixture |
 | Bedrock ConverseStream | `COMPATIBLE` | `BedrockConverseModelStream` | Command/event fixture and CRC tests |
-| Live cloud credential flows | `HOST_ORCHESTRATED` | `ProviderAuth`, resolver and interaction SPI | Deterministic tests; live profile pending |
+| Live cloud credential flows | `HOST_ORCHESTRATED` | `ProviderAuth`, resolver and interaction SPI | Opt-in `provider-live-tests` profile; credential-gated |
 | TUI login menu | `NON_GOAL` | Host supplies interaction UI | Not applicable |
 
 ## Agent and sessions
@@ -53,7 +53,7 @@ Status meanings:
 | Package and explicit roots | `HOST_ORCHESTRATED` | `packagePaths`, `explicitPaths` | Discovery tests |
 | Extension-contributed skill roots | `HEADLESS_EQUIVALENT` | `ExtensionResources`, `discoverSkills` | Extension integration test |
 | Progressive disclosure XML | `HEADLESS_EQUIVALENT` | `systemPromptXml`, `contributeToSystemPrompt` | Escaping/invocation tests |
-| `/skill:name` command dispatch | `HOST_ORCHESTRATED` | `SkillRegistry.invoke` | Host chooses command syntax |
+| `/skill:name` command dispatch | `HEADLESS_EQUIVALENT` | `SkillCommandDispatcher`, `SkillInvocation` | Parser, metadata, provenance, and policy tests |
 | Settings/package manifest resolution | `HOST_ORCHESTRATED` | Host resolves paths into discovery options | Full package manager not embedded |
 | Skill executable scripts | `HOST_ORCHESTRATED` | Paths are preserved | Host/tool policy owns execution |
 
@@ -83,8 +83,6 @@ Status meanings:
 
 The remaining work before a stable `0.1.0` is operational rather than another module split:
 
-1. Add opt-in credentialed live-provider tests.
-2. Add host examples for session replacement and command dispatch.
-3. Audit and freeze public Provider, Skills, and Extension contracts.
-4. Add binary compatibility enforcement for post-0.1 releases.
-5. Verify Sonatype Central publication with external credentials and signing keys.
+1. Add artifact-to-artifact binary compatibility comparison after publishing `0.1.0`.
+2. Run each credentialed live-provider test against an authorized account.
+3. Verify Sonatype Central publication with external credentials and signing keys.

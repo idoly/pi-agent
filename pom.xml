@@ -86,6 +86,11 @@
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>3.5.3</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-source-plugin</artifactId>
           <version>3.3.1</version>
         </plugin>
@@ -113,7 +118,7 @@
         <configuration>
           <doclint>none</doclint>
           <notimestamp>true</notimestamp>
-          <failOnWarnings>false</failOnWarnings>
+          <failOnWarnings>true</failOnWarnings>
         </configuration>
         <executions>
           <execution>
@@ -126,6 +131,30 @@
   </build>
 
   <profiles>
+    <profile>
+      <id>provider-live-tests</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>integration-test</goal>
+                  <goal>verify</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <includes>
+                <include>**/*LiveIT.java</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <profile>
       <id>release</id>
       <build>

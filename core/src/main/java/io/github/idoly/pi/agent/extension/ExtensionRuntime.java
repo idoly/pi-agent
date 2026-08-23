@@ -693,7 +693,8 @@ public final class ExtensionRuntime implements AutoCloseable {
                     String name, String description,
                     ExtensionCommand.Handler handler
             ) {
-                if (name == null || name.isBlank() || name.contains(" ")) {
+                if (name == null || name.isBlank()
+                        || name.chars().anyMatch(Character::isWhitespace)) {
                     throw new IllegalArgumentException("Invalid command name");
                 }
                 String effective = commandName(name);

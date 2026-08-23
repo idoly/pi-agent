@@ -9,6 +9,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SkillRegistryTest {
@@ -48,6 +49,41 @@ class SkillRegistryTest {
         assertFalse(prompt.contains("Manual only"));
         assertEquals("# global-root\n\nBody\n\nUser: run now",
                 trusted.invoke("global-root", " run now "));
+    }
+
+    @Test
+    void dispatchesHeadlessSkillCommandsWithPolicyAndProvenance()
+            throws Exception {
+        Path source = write(
+                temporary.resolve("explicit/review/SKILL.md"),
+                "review", "Review changes", false
+        );
+        SkillRegistry registry = SkillRegistry.discover(
+                new SkillDiscoveryOptions(
+                        temporary, temporary, false, false,
+                        List.of(source), List.of()
+                )
+        );
+        SkillCommandDispatcher dispatcher =
+                new SkillCommandDispatcher(registry);
+
+        assertTrue(dispatcher.dispatch("ordinary prompt").isEmpty());
+        SkillInvocation invocation = dispatcher.dispatch(
+                "  /skill:review src/main  "
+        ).orElseThrow();
+        assertEquals("/skill:review", invocation.command());
+        assertEquals("review", invocation.name());
+        assertEquals("src/main", invocation.arguments());
+        assertEquals(List.of("read", "bash"), invocation.allowedTools());
+        assertEquals(source.toAbsolutePath().normalize(), invocation.source());
+        assertEquals(AgentSkill.Scope.EXPLICIT, invocation.scope());
+        assertTrue(invocation.prompt().endsWith("User: src/main"));
+        assertEquals("Review changes",
+                dispatcher.commands().getFirst().description());
+        assertThrows(IllegalArgumentException.class,
+                () -> dispatcher.dispatch("/skill:missing"));
+        assertThrows(IllegalArgumentException.class,
+                () -> dispatcher.dispatch("/skill: arguments"));
     }
 
     @Test

@@ -15,7 +15,9 @@ mvn --batch-mode clean verify
 jdeps --multi-release 25 --ignore-missing-deps core/target/pi-agent-core-0.1.0-SNAPSHOT.jar
 ```
 
-The normal build attaches binary, source, and Javadoc JARs. The fixed
+The normal build attaches binary, source, and Javadoc JARs. It also compiles
+`examples/HeadlessExtensionHost.java` in CI and compares the reviewed public API
+text baseline. The fixed
 `project.build.outputTimestamp` makes archive timestamps reproducible. CI runs
 the full suite on Linux, macOS, and Windows and checks core dependency
 boundaries on Linux.
@@ -23,6 +25,15 @@ boundaries on Linux.
 Before the first release, replace `0.1.0-SNAPSHOT` with the release version and
 set the SCM tag. Verify that the GitHub repository URL and developer metadata in
 the root POM are correct for the publishing account.
+
+Credentialed service checks are a separate, potentially billable gate:
+
+```bash
+mvn --batch-mode -Pprovider-live-tests -pl vertx -am verify
+```
+
+A provider without configured credentials is skipped, so inspect the Failsafe
+summary and require zero skips for the services claimed by a release run.
 
 ## Sign and stage
 
@@ -54,4 +65,5 @@ Central Portal. The project does not commit signing keys or credentials.
   experimental session-level extensions.
 - No `com.openai`, OkHttp, Kotlin runtime, Vert.x, Mutiny, or Netty types leak
   into the core boundary where prohibited.
-- Binary compatibility comparison starts after publishing the first baseline.
+- The checked-in `0.1.0` API text baseline matches generated JAR signatures.
+- Binary compatibility comparison against artifacts starts after publishing the first baseline.

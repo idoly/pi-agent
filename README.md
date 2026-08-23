@@ -12,7 +12,7 @@
 mvn clean verify
 ```
 
-The build attaches binary, source, and Javadoc JARs for all three modules.
+The build attaches binary, source, and Javadoc JARs for all three modules. Credentialed Provider smoke tests are opt-in with `mvn -Pprovider-live-tests -pl vertx -am verify`; see [operations testing](docs/operations-testing.md) before running them because they call real services.
 
 ## SDK scope
 
@@ -22,7 +22,7 @@ The build attaches binary, source, and Javadoc JARs for all three modules.
 
 - `ai` (`pi-agent-ai`): runtime-neutral model, message, tool-definition, and streaming contracts.
 - `core` (`pi-agent-core`): stateful multi-turn agent loop, tool execution, queues, cancellation, and ordered lifecycle events.
-- `vertx` (`pi-agent-vertx`): Vert.x 5.1.6 HTTP/1.1 and HTTP/2 transport, Mutiny streaming, and incremental SSE decoding.
+- `vertx` (`pi-agent-vertx`): shared Vert.x 5.1.6 transport and native OpenAI, Anthropic, Google/Vertex, Mistral, and Bedrock protocol implementations.
 
 ## Implemented runtime behavior
 

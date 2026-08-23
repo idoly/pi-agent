@@ -61,5 +61,9 @@ durability authority.
   upstream baseline.
 - Removal or renaming of a public non-experimental API requires a deprecation
   cycle once a `1.0` baseline exists.
-- Binary compatibility automation starts from the first non-snapshot release;
-  there is no legitimate previous artifact baseline for `0.1.0-SNAPSHOT`.
+- `compat-fixtures/public-api-0.1.0.txt` is the reviewed source/JAR declaration
+  baseline for the first release. It detects accidental local surface changes,
+  but is not a substitute for binary comparison against a published artifact.
+- Artifact-to-artifact binary compatibility automation starts from the first
+  non-snapshot release; there is no legitimate previous artifact baseline for
+  `0.1.0-SNAPSHOT`.

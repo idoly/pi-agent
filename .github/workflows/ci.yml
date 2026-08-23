@@ -56,6 +56,35 @@ jobs:
       - name: Fixture hashes
         shell: bash
         run: sha256sum compat-fixtures/*.json | sort
+      - name: Public API baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          tools/generate-public-api-baseline.sh target/public-api-current.txt
+          diff -u compat-fixtures/public-api-0.1.0.txt target/public-api-current.txt
+      - name: Compile headless host example
+        shell: bash
+        run: |
+          set -euo pipefail
+          mvn --batch-mode --no-transfer-progress -q -pl core dependency:build-classpath -Dmdep.outputFile="$GITHUB_WORKSPACE/target/example-classpath.txt"
+          javac --release 25 -cp "ai/target/classes:core/target/classes:$(cat target/example-classpath.txt)" -d target/example-classes examples/HeadlessExtensionHost.java
+      - name: Verify disabled live-test profile wiring
+        shell: bash
+        env:
+          OPENAI_API_KEY: ''
+          ANTHROPIC_API_KEY: ''
+          GOOGLE_API_KEY: ''
+          GOOGLE_VERTEX_ACCESS_TOKEN: ''
+          MISTRAL_API_KEY: ''
+          AWS_BEARER_TOKEN_BEDROCK: ''
+          AWS_ACCESS_KEY_ID: ''
+          AWS_SECRET_ACCESS_KEY: ''
+          PI_LIVE_OPENAI_COMPAT_BASE_URL: ''
+          PI_LIVE_OPENAI_COMPAT_MODEL: ''
+        run: |
+          set -euo pipefail
+          mvn --batch-mode --no-transfer-progress -q -Pprovider-live-tests -pl vertx -am failsafe:integration-test failsafe:verify
+          grep -E 'Tests run: 7, Failures: 0, Errors: 0, Skipped: 7' vertx/target/failsafe-reports/io.github.idoly.pi.vertx.ProviderLiveIT.txt
       - name: Attached artifacts
         shell: bash
         run: |
