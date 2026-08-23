@@ -51,6 +51,49 @@ class SkillRegistryTest {
     }
 
     @Test
+    void readsUtf8BomAndWindowsLineEndings() throws Exception {
+        Path skill = temporary.resolve("windows/SKILL.md");
+        Files.createDirectories(skill.getParent());
+        Files.writeString(skill, "\uFEFF---\r\n"
+                + "name: windows-skill\r\n"
+                + "description: Windows formatted skill\r\n"
+                + "---\r\nBody\r\n");
+        SkillRegistry registry = SkillRegistry.discover(
+                new SkillDiscoveryOptions(
+                        temporary, temporary, false, false,
+                        List.of(skill), List.of()
+                )
+        );
+        assertEquals(1, registry.skills().size());
+        assertEquals("Body\r\n", registry.skills().getFirst().instructions());
+        assertTrue(registry.warnings().isEmpty());
+    }
+
+    @Test
+    void boundsRecursiveDiscoveryDepth() throws Exception {
+        Path root = Files.createDirectories(temporary.resolve("bounded"));
+        Path accepted = root;
+        for (int depth = 0; depth < 31; depth++) {
+            accepted = accepted.resolve("a");
+        }
+        write(accepted.resolve("SKILL.md"), "accepted", "Accepted", false);
+        Path tooDeep = root;
+        for (int depth = 0; depth < 32; depth++) {
+            tooDeep = tooDeep.resolve("b");
+        }
+        write(tooDeep.resolve("SKILL.md"), "too-deep", "Too deep", false);
+
+        SkillRegistry registry = SkillRegistry.discover(
+                new SkillDiscoveryOptions(
+                        temporary, temporary, false, false,
+                        List.of(root), List.of()
+                )
+        );
+        assertEquals(List.of("accepted"), registry.skills().stream()
+                .map(AgentSkill::name).toList());
+    }
+
+    @Test
     void validationIsLenientExceptDescriptionAndCollisionsKeepFirst()
             throws Exception {
         Path home = Files.createDirectories(temporary.resolve("home"));

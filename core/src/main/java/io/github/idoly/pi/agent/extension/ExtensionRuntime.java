@@ -56,7 +56,12 @@ public final class ExtensionRuntime implements AutoCloseable {
     private final java.util.concurrent.ConcurrentHashMap<Agent, List<AgentTool>>
             agentAvailableTools = new java.util.concurrent.ConcurrentHashMap<>();
     private volatile List<String> activeToolNames;
+    private CompletionStage<Void> sessionLifecycle =
+            CompletableFuture.completedFuture(null);
+    private boolean sessionStarted;
+    private boolean sessionShutdown;
     private boolean closed;
+    private CompletionStage<Void> closeStage;
 
     private ExtensionRuntime(ExtensionContext context) {
         this.context = context;
@@ -143,15 +148,37 @@ public final class ExtensionRuntime implements AutoCloseable {
         }
     }
 
-    public CompletionStage<Void> startSession() {
+    public synchronized CompletionStage<Void> startSession() {
         requireOpen();
-        return runPassive(sessionStarts, hook -> hook.handle(context));
+        if (sessionShutdown) {
+            return CompletableFuture.failedFuture(new IllegalStateException(
+                    "Extension session has already shut down"
+            ));
+        }
+        if (sessionStarted) return sessionLifecycle;
+        sessionStarted = true;
+        sessionLifecycle = sessionLifecycle.thenCompose(ignored ->
+                runPassive(sessionStarts, hook -> hook.handle(context))
+        );
+        return sessionLifecycle;
     }
 
-    public CompletionStage<Void> shutdownSession() {
-        return runPassive(
-                sessionShutdowns.reversed(), hook -> hook.handle(context)
-        );
+    public synchronized CompletionStage<Void> shutdownSession() {
+        return scheduleShutdown();
+    }
+
+    private CompletionStage<Void> scheduleShutdown() {
+        if (sessionShutdown) return sessionLifecycle;
+        sessionShutdown = true;
+        if (sessionStarted) {
+            sessionLifecycle = sessionLifecycle.thenCompose(ignored ->
+                    runPassive(
+                            sessionShutdowns.reversed(),
+                            hook -> hook.handle(context)
+                    )
+            );
+        }
+        return sessionLifecycle;
     }
 
     public ExtensionAgent createExtensionAgent(AgentOptions options) {
@@ -505,10 +532,17 @@ public final class ExtensionRuntime implements AutoCloseable {
 
     @Override
     public void close() {
-        if (closed) return;
-        shutdownSession().toCompletableFuture().join();
-        closed = true;
-        if (ownsProviders) providers.close();
+        CompletionStage<Void> stage;
+        synchronized (this) {
+            if (closeStage == null) {
+                closed = true;
+                closeStage = scheduleShutdown().thenRun(() -> {
+                    if (ownsProviders) providers.close();
+                });
+            }
+            stage = closeStage;
+        }
+        stage.toCompletableFuture().join();
     }
 
     private record Owned<T>(String id, T value) {

@@ -23,6 +23,8 @@ import java.util.stream.Stream;
 /** Agent Skills discovery, validation, progressive disclosure, and invocation. */
 public final class SkillRegistry {
     private static final long MAX_SKILL_BYTES = 2L * 1024 * 1024;
+    private static final int MAX_DISCOVERY_DEPTH = 32;
+    private static final int MAX_DISCOVERY_ENTRIES = 10_000;
     private static final Pattern NAME = Pattern.compile(
             "^[a-z0-9]+(?:-[a-z0-9]+)*$"
     );
@@ -148,21 +150,33 @@ public final class SkillRegistry {
         if (Files.isRegularFile(path)) return List.of(path);
         if (!Files.isDirectory(path)) return List.of();
         ArrayList<Path> result = new ArrayList<>();
-        try (Stream<Path> paths = Files.walk(path)) {
-            paths.filter(Files::isRegularFile).forEach(candidate -> {
-                String name = candidate.getFileName().toString();
-                if (name.equals("SKILL.md")
-                        || root.allowRootMarkdown()
-                        && candidate.getParent().equals(path)
-                        && name.toLowerCase(Locale.ROOT).endsWith(".md")) {
-                    result.add(candidate);
-                }
-            });
-        } catch (IOException failure) {
+        try (Stream<Path> paths = Files.walk(path, MAX_DISCOVERY_DEPTH)) {
+            List<Path> visited = paths.limit(MAX_DISCOVERY_ENTRIES + 1L)
+                    .toList();
+            if (visited.size() > MAX_DISCOVERY_ENTRIES) {
+                warnings.add("Skill root exceeds " + MAX_DISCOVERY_ENTRIES
+                        + " filesystem entries; remaining entries were skipped: "
+                        + path);
+                visited = visited.subList(0, MAX_DISCOVERY_ENTRIES);
+            }
+            result.addAll(visited.stream()
+                    .filter(Files::isRegularFile)
+                    .filter(candidate -> {
+                        String name = candidate.getFileName().toString();
+                        return name.equals("SKILL.md")
+                                || root.allowRootMarkdown()
+                                && candidate.getParent().equals(path)
+                                && name.toLowerCase(Locale.ROOT).endsWith(".md");
+                    }).toList());
+        } catch (IOException | java.io.UncheckedIOException failure) {
+            Throwable cause = failure instanceof java.io.UncheckedIOException
+                    ? failure.getCause() : failure;
             warnings.add("Failed to scan skill root " + path + ": "
-                    + failure.getMessage());
+                    + cause.getMessage());
         }
-        result.sort(java.util.Comparator.comparing(Path::toString));
+        result.sort(java.util.Comparator.comparing(
+                candidate -> candidate.toString().replace('\\', '/')
+        ));
         return result;
     }
 
@@ -179,6 +193,9 @@ public final class SkillRegistry {
                 return null;
             }
             String document = Files.readString(source, StandardCharsets.UTF_8);
+            if (document.startsWith("\uFEFF")) {
+                document = document.substring(1);
+            }
             Frontmatter frontmatter = frontmatter(document);
             if (frontmatter == null) {
                 discoveryWarnings.add("Skill frontmatter is missing: " + source);

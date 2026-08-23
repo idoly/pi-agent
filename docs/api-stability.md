@@ -4,7 +4,7 @@ The project has two compatibility layers. They must not be conflated.
 
 ## SDK scope
 
-`pi-agent` is a headless Java Agent SDK. Native extensions use `AgentExtension`, `ExtensionApi`, `ExtensionRuntime`, and `ExtensionLoader` for host-neutral lifecycle, agent/context/tool middleware, providers, commands, shared events, trusted JAR discovery, ServiceLoader loading, and classloader reload. Existing TypeScript extensions are not loaded or executed and must be rewritten against the Java SPI. TUI components, terminal rendering hooks, themes, custom editors, overlays, and TypeScript renderer callbacks are outside the SDK scope. Skills use `SkillRegistry` for Agent Skills frontmatter, trust-aware discovery, lenient validation, progressive disclosure, and explicit invocation.
+`pi-agent` is a headless Java Agent SDK. Native extensions use `AgentExtension`, `ExtensionApi`, `ExtensionRuntime`, and `ExtensionLoader` for host-neutral lifecycle, agent/context/tool middleware, providers, commands, shared events, trusted JAR discovery, ServiceLoader loading, and classloader reload. Session start/shutdown are idempotent, shutdown order is reversed, and a shut-down runtime cannot be restarted. Existing TypeScript extensions are not loaded or executed and must be rewritten against the Java SPI. TUI components, terminal rendering hooks, themes, custom editors, overlays, and TypeScript renderer callbacks are outside the SDK scope. Project trust decisions, command dispatch, and session replacement are host responsibilities. Skills use `SkillRegistry` for Agent Skills frontmatter, trust-aware bounded discovery, lenient validation, progressive disclosure, and explicit invocation.
 
 ## Upstream compatibility
 

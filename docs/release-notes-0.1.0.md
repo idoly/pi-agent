@@ -19,7 +19,7 @@ executable harness contract.
 
 ## Java extensions
 
-The headless SDK includes native Java extension lifecycle/tool/context/provider/command middleware, trusted JAR discovery and reload, and Agent Skills discovery with progressive disclosure. TypeScript loading and TUI rendering are intentionally excluded.
+The headless SDK includes native Java extension lifecycle/tool/context/provider/command middleware, trusted JAR discovery and reload, and Agent Skills discovery with progressive disclosure. Extension session lifecycle is idempotent with reverse shutdown, and a real compiled ServiceLoader JAR covers reload behavior. Skill discovery accepts UTF-8 BOM and Windows line endings and is bounded by depth, filesystem-entry count, and per-file size. TypeScript loading and TUI rendering are intentionally excluded.
 
 Durable run, tool, queue, navigation, compaction, recovery, checkpoint,
 maintenance, remote abort, and cleanup APIs are Java session-level extensions.

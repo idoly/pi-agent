@@ -40,6 +40,8 @@ cross-machine comparisons invalid.
 | Verifier interruption | Persisted dual-cursor state resumes without recounting; completed state is terminal. |
 | Manifest corruption/path traversal | Structured decoder validates version, root ownership, unique paths, size, hash, and normalized containment. |
 | Provider protocol compatibility | The pinned TypeScript 0.84.2 Anthropic, Google, Mistral, and Bedrock implementations run against deterministic mock transports to generate semantic requests, final wire payloads, frames, events, and terminal messages. Java codecs compare against the resulting versioned fixture. |
+| Java extension reload | A test compiles a real extension JAR with the JDK compiler, writes its ServiceLoader descriptor without shell tools, then verifies load/start/reload/start/close and exactly-once reverse shutdown. |
+| Skills portability and bounds | Discovery normalizes ordering across path separators, accepts UTF-8 BOM with LF/CRLF, limits depth/filesystem-entry count/skill size, and gates default project roots on host trust. |
 
 Disk-full and permission-denied behavior is expressed as `SessionError.Code.STORAGE`
 by the same persistence-before-publication paths, but deterministic tests for

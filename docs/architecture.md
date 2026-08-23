@@ -16,6 +16,10 @@ Published artifacts use Maven group `io.github.idoly`; Java packages use `io.git
 
 Deterministic scripted streams are Core test fixtures, not a separately published module. Provider codecs stay in `vertx` until another transport implementation or independent release lifecycle makes a further split useful.
 
+Agent Skills remain resource data, not executable extension classes. `SkillRegistry` discovers global, trusted-project, package, and explicit roots in deterministic first-wins order, parses frontmatter with SnakeYAML's safe constructor, preserves full instructions for on-demand disclosure, and bounds each root to 32 levels, 10,000 filesystem entries, and 2 MiB per skill. Project trust gates default project roots; package and explicit roots are host-authorized inputs.
+
+Native Java extensions are loaded through `ServiceLoader` in an isolated `URLClassLoader`. Initialization and active hooks run in deterministic extension order; shutdown runs in reverse order. Session lifecycle calls are idempotent, and reload closes the old runtime and classloader before discovering the replacement. The SPI is headless: the embedding host owns project trust decisions, command dispatch, and session replacement orchestration, while renderer, editor, theme, overlay, and TypeScript loading surfaces stay outside the SDK.
+
 The Core consumes a `ModelStream`, represented as a JDK `Flow.Publisher<AssistantStreamEvent>`. Mutiny `Multi` implements `Flow.Publisher`, so this boundary needs no reactive-streams adapter. Vert.x, Mutiny, Netty buffers, and event-loop types do not enter the Core API.
 
 ## Runtime baseline

@@ -78,6 +78,80 @@ class ExtensionRuntimeTest {
     }
 
     @Test
+    void sessionLifecycleIsOrderedAndIdempotent() {
+        ArrayList<String> calls = new ArrayList<>();
+        AgentExtension first = extension("first", 0, api -> {
+            api.onSessionStart(context -> {
+                calls.add("start:first");
+                return CompletableFuture.completedFuture(null);
+            });
+            api.onSessionShutdown(context -> {
+                calls.add("stop:first");
+                return CompletableFuture.completedFuture(null);
+            });
+        });
+        AgentExtension second = extension("second", 1, api -> {
+            api.onSessionStart(context -> {
+                calls.add("start:second");
+                return CompletableFuture.completedFuture(null);
+            });
+            api.onSessionShutdown(context -> {
+                calls.add("stop:second");
+                return CompletableFuture.completedFuture(null);
+            });
+        });
+        ExtensionRuntime runtime = join(ExtensionRuntime.load(
+                context(), List.of(second, first)
+        ));
+        join(runtime.startSession());
+        join(runtime.startSession());
+        join(runtime.shutdownSession());
+        join(runtime.shutdownSession());
+        assertEquals(List.of(
+                "start:first", "start:second", "stop:second", "stop:first"
+        ), calls);
+        assertThrows(java.util.concurrent.CompletionException.class, () ->
+                join(runtime.startSession()));
+        runtime.close();
+        assertEquals(4, calls.size());
+
+        ArrayList<String> unopenedCalls = new ArrayList<>();
+        ExtensionRuntime unopened = join(ExtensionRuntime.load(
+                context(), List.of(extension("unopened", 0, api ->
+                        api.onSessionShutdown(ignored -> {
+                            unopenedCalls.add("stop");
+                            return CompletableFuture.completedFuture(null);
+                        })
+                ))
+        ));
+        unopened.close();
+        assertTrue(unopenedCalls.isEmpty());
+
+        java.util.concurrent.atomic.AtomicInteger concurrentStops =
+                new java.util.concurrent.atomic.AtomicInteger();
+        ExtensionRuntime concurrent = join(ExtensionRuntime.load(
+                context(), List.of(extension("concurrent", 0, api ->
+                        api.onSessionShutdown(ignored ->
+                                CompletableFuture.runAsync(() -> {
+                                    concurrentStops.incrementAndGet();
+                                    try {
+                                        Thread.sleep(25);
+                                    } catch (InterruptedException failure) {
+                                        Thread.currentThread().interrupt();
+                                    }
+                                })
+                        )
+                ))
+        ));
+        join(concurrent.startSession());
+        CompletableFuture.allOf(
+                CompletableFuture.runAsync(concurrent::close),
+                CompletableFuture.runAsync(concurrent::close)
+        ).orTimeout(3, java.util.concurrent.TimeUnit.SECONDS).join();
+        assertEquals(1, concurrentStops.get());
+    }
+
+    @Test
     void dynamicallyRegistersAndActivatesToolsOnExistingAgents() {
         java.util.concurrent.atomic.AtomicReference<ExtensionApi> api =
                 new java.util.concurrent.atomic.AtomicReference<>();

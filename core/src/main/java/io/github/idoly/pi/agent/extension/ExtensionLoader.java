@@ -87,6 +87,8 @@ public final class ExtensionLoader {
                     });
         } catch (ScanFailure failure) {
             throw failure.cause;
+        } catch (java.io.UncheckedIOException failure) {
+            throw failure.getCause();
         }
     }
 

@@ -16,7 +16,7 @@ The build attaches binary, source, and Javadoc JARs for all three modules.
 
 ## SDK scope
 
-`pi-agent` targets headless JVM embedding. Native Java extensions support ordered lifecycle middleware, tools, providers, host commands, shared events, trusted JAR discovery, ServiceLoader registration, and classloader reload. Agent Skills support trust-aware discovery, Agent Skills frontmatter, lenient validation, progressive disclosure, and explicit invocation. TypeScript extension loading and TUI-specific rendering are explicit non-goals.
+`pi-agent` targets headless JVM embedding. Native Java extensions support ordered, idempotent session lifecycle middleware, tools, providers, host commands, shared events, trusted JAR discovery, ServiceLoader registration, and classloader reload. Agent Skills support bounded trust-aware discovery, Agent Skills frontmatter, lenient validation, progressive disclosure, explicit invocation, UTF-8 BOM, and LF/CRLF files. TypeScript extension loading and TUI-specific rendering are explicit non-goals; project trust and session replacement remain host responsibilities.
 
 ## Modules
 

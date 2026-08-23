@@ -832,7 +832,6 @@ public final class SecurityExtension implements AgentExtension {
                     BeforeToolCallResult.allow()
             );
         });
-        api.registerTool(new AuditTool());
     }
 }
 ```
@@ -843,7 +842,7 @@ JAR中添加：
 META-INF/services/io.github.idoly.pi.agent.extension.AgentExtension
 ```
 
-内容为实现类全名。Host加载：
+内容为实现类全名。实现类必须是public，并提供public无参构造器，遵循JDK `ServiceLoader`规则。Host加载：
 
 ```java
 ExtensionContext extensionContext = new ExtensionContext(
@@ -856,10 +855,31 @@ ExtensionLoadOptions loadOptions = new ExtensionLoadOptions(
 ExtensionLoader.LoadedRuntime loaded = ExtensionLoader.load(
         extensionContext, loadOptions
 ).toCompletableFuture().join();
-ExtensionAgent agent = loaded.runtime().createExtensionAgent(agentOptions);
+try (loaded) {
+    ExtensionRuntime runtime = loaded.runtime();
+    runtime.startSession().toCompletableFuture().join();
+    ExtensionAgent agent = runtime.createExtensionAgent(agentOptions);
+    agent.prompt("Inspect the repository").toCompletableFuture().join();
+}
 ```
 
-默认发现`~/.pi/agent/extensions`；只有project trusted时才发现`.pi/extensions`。`reload()`会先执行session shutdown、关闭旧runtime/classloader，再重新发现JAR。Extension普通事件错误被隔离并记录到`failures()`；before-tool错误fail-safe block。
+`startSession()`和`shutdownSession()`幂等；start hooks按extension顺序执行，shutdown hooks逆序执行。未start的runtime在close时不触发shutdown，已经shutdown的runtime不能重新start。`close()`等待shutdown hooks完成后再关闭Provider和classloader。
+
+默认发现`~/.pi/agent/extensions`；只有project trusted时才发现`.pi/extensions`。Global、project和explicit JAR均以当前JVM进程权限运行，host必须在load前完成来源校验。`reload(context)`会先shutdown并关闭旧runtime/classloader，再重新发现JAR，返回一个新的`LoadedRuntime`；旧对象随后不可使用，新runtime仍需调用`startSession()`。Extension普通事件错误被隔离并记录到`failures()`；before-tool错误fail-safe block。
+
+Java SPI与上游coding-agent extension事件面的对应边界：
+
+| 能力 | Java headless SDK |
+| --- | --- |
+| Async initialize、session start/shutdown | 内置 |
+| Before-agent、agent events、context middleware | 内置 |
+| Before/after tool middleware | 内置 |
+| Tools、动态active tools、providers、commands、event bus | 内置 |
+| Durable state | 通过`ExtensionContext.session()`和session API |
+| Project trust决策、命令分发、session switch/fork/compaction | 由嵌入SDK的host编排 |
+| Provider wire payload/header/response hooks | 当前不属于Core `ModelStream`边界 |
+| Dialog、shortcut、flag、renderer、theme、editor、overlay | TUI/CLI专属，不实现 |
+| TypeScript加载和Node兼容 | 不实现，extension必须重写为Java |
 
 ## 20. Agent Skills
 
@@ -888,8 +908,13 @@ String invoked = skills.invoke("pdf-tools", "extract report.pdf");
 - `allowed-tools`
 - XML progressive disclosure
 - Scripts、references和assets相对目录
+- UTF-8 BOM和LF/CRLF frontmatter
+- 单个Skill最大2 MiB
+- 每个root最多32层和10,000个filesystem entries
 
-Skill可以包含可执行脚本，加载前仍需由host建立project trust。
+预算内扫描结果按`/`规范化后的路径排序；roots按global、trusted project、package、explicit顺序处理。Name collision采用first-wins并产生warning。显式路径即host显式授权的资源，即使project未trusted也会加载；不要把不可信项目路径作为explicit path传入。
+
+Skill可以包含可执行脚本。Project defaults只有在`projectTrusted=true`时发现，但global、package和explicit来源的可信度仍由host负责。扫描预算用于限制误配或恶意目录对启动时间和内存的影响；超过entry预算时停止该root的剩余遍历并产生warning。超限时具体前缀取决于filesystem遍历顺序，因此不要依赖超限目录的collision结果。
 
 ## 21. 多Provider
 
