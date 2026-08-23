@@ -1881,14 +1881,21 @@ public final class JsonlSessionRepository implements SessionRepository {
             Runnable notify
     ) {
         MarkerStamp observed = null;
+        MarkerStamp pending = null;
         while (!closed.get() && !signaled.get()) {
             MarkerStamp current = markerStamp(marker);
-            if (current != null && !current.equals(observed)) {
+            if (current == null) {
+                observed = null;
+                pending = null;
+            } else if (current.equals(observed)) {
+                pending = null;
+            } else if (current.equals(pending)) {
                 observed = current;
+                pending = null;
                 notify.run();
                 if (signaled.get()) return;
-            } else if (current == null) {
-                observed = null;
+            } else {
+                pending = current;
             }
             try {
                 Thread.sleep(20);

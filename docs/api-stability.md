@@ -64,6 +64,7 @@ durability authority.
 - `compat-fixtures/public-api-0.1.0.txt` is the reviewed source/JAR declaration
   baseline for the first release. It detects accidental local surface changes,
   but is not a substitute for binary comparison against a published artifact.
-- Artifact-to-artifact binary compatibility automation starts from the first
-  non-snapshot release; there is no legitimate previous artifact baseline for
-  `0.1.0-SNAPSHOT`.
+- The `api-compat` Maven profile performs artifact-to-artifact public binary
+  and source comparison with japicmp. It defaults to previous version `0.1.0`
+  and becomes an authoritative release gate after that artifact is published;
+  there is no legitimate remote previous artifact for `0.1.0-SNAPSHOT` itself.

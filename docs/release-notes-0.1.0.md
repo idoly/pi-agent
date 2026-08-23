@@ -26,6 +26,8 @@ maintenance, remote abort, and cleanup APIs are Java session-level extensions.
 They use the upstream-compatible JSONL v4 mutation format but are marked or
 documented as experimental before 1.0.
 
+Polling-based abort marker observation debounces filesystem stamps across two observations so one truncate/write transition cannot cause duplicate durable verification; JSONL records remain the only abort authority.
+
 Checkpoint administration supports immutable per-generation inventories,
 full and bounded verification, independent scan/detail cursors, resumable
 orchestration, and cross-JVM mutation diagnostics. It does not claim a globally
@@ -33,7 +35,7 @@ simultaneous repository snapshot.
 
 ## Runtime boundaries
 
-Credential-gated Failsafe smoke tests cover OpenAI, Anthropic, Google AI Studio/Vertex, Mistral, Bedrock, and local OpenAI-compatible endpoints without running in the default lifecycle. A compile-checked headless host example demonstrates extension command dispatch, `/skill:name` invocation metadata and permissions, session replacement arbitration, and compaction hooks. The reviewed Java 25 `javap` declaration set is checked in as the `0.1.0` public API baseline and verified by CI.
+Credential-gated Failsafe smoke tests cover OpenAI, Anthropic, Google AI Studio/Vertex, Mistral, Bedrock, and local OpenAI-compatible endpoints without running in the default lifecycle. A compile-checked headless host example demonstrates extension command dispatch, `/skill:name` invocation metadata and permissions, session replacement arbitration, and compaction hooks. The reviewed Java 25 `javap` declaration set is checked in as the `0.1.0` public API baseline and verified by CI; a japicmp profile is ready for artifact comparison after publication. Release tooling also verifies repeatable binary/source/Javadoc JAR hashes.
 
 Core exposes JDK `Flow.Publisher` streaming and has no Vert.x, Mutiny, or Netty
 runtime dependency. Vert.x 5.1.6 and SmallRye Mutiny 3.3.0 are isolated in

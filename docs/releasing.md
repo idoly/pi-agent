@@ -12,8 +12,22 @@
 
 ```bash
 mvn --batch-mode clean verify
+mvn --batch-mode -Prelease -Dgpg.skip=true clean verify
+tools/verify-reproducible-build.sh
 jdeps --multi-release 25 --ignore-missing-deps core/target/pi-agent-core-0.1.0-SNAPSHOT.jar
 ```
+
+A credential-free deployment-layout smoke test can use a temporary local Maven
+repository:
+
+```bash
+mvn -DskipTests deploy \
+  -DaltDeploymentRepository=release-dry-run::file:/tmp/pi-agent-release
+```
+
+It must publish the root POM plus binary, source, Javadoc, and POM artifacts for
+each of the three modules. It does not validate signatures or Central Portal
+authorization.
 
 The normal build attaches binary, source, and Javadoc JARs. It also compiles
 `examples/HeadlessExtensionHost.java` in CI and compares the reviewed public API
@@ -34,6 +48,23 @@ mvn --batch-mode -Pprovider-live-tests -pl vertx -am verify
 
 A provider without configured credentials is skipped, so inspect the Failsafe
 summary and require zero skips for the services claimed by a release run.
+
+After `0.1.0` is available from the configured Maven repositories, later
+releases compare all three public artifacts with japicmp:
+
+```bash
+mvn --batch-mode -Papi-compat \
+  -Dpi.api.previousVersion=0.1.0 clean verify
+```
+
+The profile excludes `io.github.idoly.pi.vertx.internal`, skips the root POM,
+and fails on public binary or source incompatibility. During first-release
+preparation its wiring can be tested against a locally installed snapshot:
+
+```bash
+mvn -DskipTests install
+mvn -Papi-compat -Dpi.api.previousVersion=0.1.0-SNAPSHOT clean verify
+```
 
 ## Sign and stage
 
@@ -66,4 +97,4 @@ Central Portal. The project does not commit signing keys or credentials.
 - No `com.openai`, OkHttp, Kotlin runtime, Vert.x, Mutiny, or Netty types leak
   into the core boundary where prohibited.
 - The checked-in `0.1.0` API text baseline matches generated JAR signatures.
-- Binary compatibility comparison against artifacts starts after publishing the first baseline.
+- The `api-compat` profile passes against the selected previously published artifact version.

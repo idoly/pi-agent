@@ -12,7 +12,7 @@
 mvn clean verify
 ```
 
-The build attaches binary, source, and Javadoc JARs for all three modules. Credentialed Provider smoke tests are opt-in with `mvn -Pprovider-live-tests -pl vertx -am verify`; see [operations testing](docs/operations-testing.md) before running them because they call real services.
+The build attaches binary, source, and Javadoc JARs for all three modules. `tools/verify-reproducible-build.sh` compares two clean artifact sets. Credentialed Provider smoke tests are opt-in with `mvn -Pprovider-live-tests -pl vertx -am verify`; see [operations testing](docs/operations-testing.md) before running them because they call real services.
 
 ## SDK scope
 

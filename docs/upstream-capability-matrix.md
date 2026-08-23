@@ -83,6 +83,6 @@ Status meanings:
 
 The remaining work before a stable `0.1.0` is operational rather than another module split:
 
-1. Add artifact-to-artifact binary compatibility comparison after publishing `0.1.0`.
+1. Run the configured `api-compat` profile against Central after `0.1.0` is published.
 2. Run each credentialed live-provider test against an authorized account.
 3. Verify Sonatype Central publication with external credentials and signing keys.
