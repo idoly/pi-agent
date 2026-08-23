@@ -1028,7 +1028,26 @@ ApiKeyResolver vertexTokenResolver = provider ->
                 .thenApply(token -> "Bearer " + token);
 ```
 
-Bedrock接受`AWS_BEARER_TOKEN_BEDROCK`，或使用`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`、`AWS_SESSION_TOKEN`执行SigV4。AWS profile文件和credential-chain持久化由host负责，不由SDK读取或保存。
+Bedrock接受`AWS_BEARER_TOKEN_BEDROCK`，或使用`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`、`AWS_SESSION_TOKEN`执行SigV4。需要STS、profile或workload identity refresh时，host可通过纯JDK异步SPI接入自己的credential chain；resolver按请求接收model和cancellation，完成后SDK才基于最终payload执行SigV4并发送HTTP请求。AWS官方SDK类型不进入SDK契约，credential也不会被SDK持久化。
+
+```java
+AsyncAwsCredentialsProvider awsCredentials = (model, cancellation) ->
+        hostCredentialChain.resolve(cancellation)
+                .thenApply(value -> new AwsCredentials(
+                        value.accessKeyId(),
+                        value.secretAccessKey(),
+                        value.sessionToken()
+                ));
+
+VertxModelProviders providers = VertxModelProviders.withAsyncAwsCredentials(
+        transport,
+        objectMapper,
+        ProviderModelCatalog.bundled(),
+        awsCredentials
+);
+```
+
+该工厂复用host提供的`VertxSseHttpClient`，因此transport生命周期仍由host负责。原有同步`AwsCredentialsProvider`构造器继续可用，并通过已完成的stage适配。
 
 自定义Ollama/vLLM/LM Studio或代理可读取pi风格`models.json`：
 

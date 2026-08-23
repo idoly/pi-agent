@@ -16,6 +16,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Flow;
 
 /** AWS Bedrock ConverseStream with bearer-token or SigV4 authentication. */
@@ -24,14 +26,15 @@ public final class BedrockConverseModelStream
     private final VertxSseHttpClient transport;
     private final ObjectMapper mapper;
     private final BedrockConverseCodec codec;
-    private final AwsCredentialsProvider credentials;
+    private final AsyncAwsCredentialsProvider credentials;
     private final Clock clock;
     private final boolean ownsTransport;
 
     public BedrockConverseModelStream() {
         this(
                 new VertxSseHttpClient(), new ObjectMapper(),
-                AwsCredentials::fromEnvironment, Clock.systemUTC(), true
+                AsyncAwsCredentialsProvider.from(AwsCredentials::fromEnvironment),
+                Clock.systemUTC(), true
         );
     }
 
@@ -40,13 +43,26 @@ public final class BedrockConverseModelStream
             ObjectMapper mapper,
             AwsCredentialsProvider credentials
     ) {
-        this(transport, mapper, credentials, Clock.systemUTC(), false);
+        this(
+                transport, mapper, AsyncAwsCredentialsProvider.from(credentials),
+                Clock.systemUTC(), false
+        );
+    }
+
+    public static BedrockConverseModelStream withAsyncCredentials(
+            VertxSseHttpClient transport,
+            ObjectMapper mapper,
+            AsyncAwsCredentialsProvider credentials
+    ) {
+        return new BedrockConverseModelStream(
+                transport, mapper, credentials, Clock.systemUTC(), false
+        );
     }
 
     BedrockConverseModelStream(
             VertxSseHttpClient transport,
             ObjectMapper mapper,
-            AwsCredentialsProvider credentials,
+            AsyncAwsCredentialsProvider credentials,
             Clock clock,
             boolean ownsTransport
     ) {
@@ -109,9 +125,14 @@ public final class BedrockConverseModelStream
             } catch (JsonProcessingException failure) {
                 return Multi.createFrom().failure(failure);
             }
-            Map<String, String> effectiveHeaders = prepared.headers();
-            if (!bearerAuth) {
-                AwsCredentials resolved = credentials.resolve();
+            if (bearerAuth) {
+                return execute(
+                        uri, body, prepared.headers(), model, options
+                );
+            }
+            return io.smallrye.mutiny.Uni.createFrom().completionStage(
+                    () -> resolveCredentials(model, options)
+            ).toMulti().onItem().transformToMultiAndConcatenate(resolved -> {
                 if (resolved == null) {
                     return Multi.createFrom().failure(
                             new IllegalArgumentException(
@@ -120,7 +141,7 @@ public final class BedrockConverseModelStream
                     );
                 }
                 LinkedHashMap<String, String> unsigned = new LinkedHashMap<>();
-                effectiveHeaders.forEach((name, value) -> {
+                prepared.headers().forEach((name, value) -> {
                     String lower = name.toLowerCase(java.util.Locale.ROOT);
                     if (!lower.equals("authorization")
                             && !lower.equals("host")
@@ -128,19 +149,47 @@ public final class BedrockConverseModelStream
                         unsigned.put(name, value);
                     }
                 });
-                effectiveHeaders = AwsSigV4.sign(
+                Map<String, String> signed = AwsSigV4.sign(
                         uri, "POST", body, unsigned,
                         region(model), "bedrock", resolved, clock
                 );
-            }
-            return ProviderHttpHooks.observeBinary(transport.executeBinary(
-                    SseHttpRequest.post(uri, effectiveHeaders, body),
-                    options.cancellation()
-            ), model, options).toMulti()
-                    .onItem().transformToMultiAndConcatenate(response ->
-                            codec.decode(response.chunks(), model)
-                    );
+                return execute(uri, body, signed, model, options);
+            });
         });
+    }
+
+    private Multi<AssistantStreamEvent> execute(
+            URI uri,
+            byte[] body,
+            Map<String, String> headers,
+            Model model,
+            StreamOptions options
+    ) {
+        return ProviderHttpHooks.observeBinary(transport.executeBinary(
+                SseHttpRequest.post(uri, headers, body),
+                options.cancellation()
+        ), model, options).toMulti()
+                .onItem().transformToMultiAndConcatenate(response ->
+                        codec.decode(response.chunks(), model)
+                );
+    }
+
+    private CompletionStage<AwsCredentials> resolveCredentials(
+            Model model,
+            StreamOptions options
+    ) {
+        try {
+            CompletionStage<AwsCredentials> stage = credentials.resolve(
+                    model, options.cancellation()
+            );
+            return stage == null ? CompletableFuture.failedFuture(
+                    new NullPointerException(
+                            "AsyncAwsCredentialsProvider returned null stage"
+                    )
+            ) : stage;
+        } catch (Throwable failure) {
+            return CompletableFuture.failedFuture(failure);
+        }
     }
 
     static URI uri(Model model) {

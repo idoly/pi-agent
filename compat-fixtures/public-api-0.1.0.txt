@@ -3944,6 +3944,7 @@ public final class io.github.idoly.pi.vertx.VertxModelProviders implements io.gi
   public io.github.idoly.pi.vertx.VertxModelProviders();
   public io.github.idoly.pi.vertx.VertxModelProviders(io.github.idoly.pi.vertx.VertxSseHttpClient, com.fasterxml.jackson.databind.ObjectMapper);
   public io.github.idoly.pi.vertx.VertxModelProviders(io.github.idoly.pi.vertx.VertxSseHttpClient, com.fasterxml.jackson.databind.ObjectMapper, io.github.idoly.pi.vertx.ProviderModelCatalog, io.github.idoly.pi.vertx.bedrock.AwsCredentialsProvider);
+  public static io.github.idoly.pi.vertx.VertxModelProviders withAsyncAwsCredentials(io.github.idoly.pi.vertx.VertxSseHttpClient, com.fasterxml.jackson.databind.ObjectMapper, io.github.idoly.pi.vertx.ProviderModelCatalog, io.github.idoly.pi.vertx.bedrock.AsyncAwsCredentialsProvider);
   public io.github.idoly.pi.ai.ProviderRegistry registry();
   public io.github.idoly.pi.vertx.ProviderModelCatalog catalog();
   public java.util.List<io.github.idoly.pi.ai.Model> models();
@@ -4000,6 +4001,12 @@ public final class io.github.idoly.pi.vertx.anthropic.AnthropicMessagesModelStre
   public void close();
 }
 
+## io.github.idoly.pi.vertx.bedrock.AsyncAwsCredentialsProvider
+public interface io.github.idoly.pi.vertx.bedrock.AsyncAwsCredentialsProvider {
+  public abstract java.util.concurrent.CompletionStage<io.github.idoly.pi.vertx.bedrock.AwsCredentials> resolve(io.github.idoly.pi.ai.Model, io.github.idoly.pi.ai.CancellationSignal);
+  public static io.github.idoly.pi.vertx.bedrock.AsyncAwsCredentialsProvider from(io.github.idoly.pi.vertx.bedrock.AwsCredentialsProvider);
+}
+
 ## io.github.idoly.pi.vertx.bedrock.AwsCredentials
 public final class io.github.idoly.pi.vertx.bedrock.AwsCredentials extends java.lang.Record {
   public io.github.idoly.pi.vertx.bedrock.AwsCredentials(java.lang.String, java.lang.String, java.lang.String);
@@ -4051,6 +4058,7 @@ public final class io.github.idoly.pi.vertx.bedrock.BedrockConverseCodec {
 public final class io.github.idoly.pi.vertx.bedrock.BedrockConverseModelStream implements io.github.idoly.pi.ai.ModelProvider,java.lang.AutoCloseable {
   public io.github.idoly.pi.vertx.bedrock.BedrockConverseModelStream();
   public io.github.idoly.pi.vertx.bedrock.BedrockConverseModelStream(io.github.idoly.pi.vertx.VertxSseHttpClient, com.fasterxml.jackson.databind.ObjectMapper, io.github.idoly.pi.vertx.bedrock.AwsCredentialsProvider);
+  public static io.github.idoly.pi.vertx.bedrock.BedrockConverseModelStream withAsyncCredentials(io.github.idoly.pi.vertx.VertxSseHttpClient, com.fasterxml.jackson.databind.ObjectMapper, io.github.idoly.pi.vertx.bedrock.AsyncAwsCredentialsProvider);
   public java.lang.String id();
   public boolean supports(io.github.idoly.pi.ai.Model);
   public java.util.concurrent.Flow$Publisher<io.github.idoly.pi.ai.AssistantStreamEvent> stream(io.github.idoly.pi.ai.Model, io.github.idoly.pi.ai.ModelContext, io.github.idoly.pi.ai.StreamOptions);

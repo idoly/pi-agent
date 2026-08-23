@@ -26,7 +26,7 @@ Status meanings:
 | Google AI Studio/Vertex | `COMPATIBLE` | `GoogleGenerativeModelStream` | Upstream protocol fixture |
 | Mistral Conversations | `COMPATIBLE` | `MistralConversationsModelStream` | Final wire payload and reasoning-effort fixtures |
 | Bedrock ConverseStream | `COMPATIBLE` | `BedrockConverseModelStream` | Command/event/modeled-error fixture and CRC tests |
-| Live cloud credential flows | `HOST_ORCHESTRATED` | `ProviderAuth`, asynchronous resolver and interaction SPI; explicit Vertex Bearer/header contract | Opaque-token authentication tests and opt-in credential-gated live profile |
+| Live cloud credential flows | `HOST_ORCHESTRATED` | Explicit Vertex Bearer/header contract and `AsyncAwsCredentialsProvider` | Opaque-token tests, pending/failing AWS refresh tests, and opt-in credential-gated live profile |
 | TUI login menu | `NON_GOAL` | Host supplies interaction UI | Not applicable |
 
 ## Agent and sessions

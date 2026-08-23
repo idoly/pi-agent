@@ -3,6 +3,7 @@ package io.github.idoly.pi.vertx;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.idoly.pi.ai.*;
 import io.github.idoly.pi.vertx.anthropic.AnthropicMessagesModelStream;
+import io.github.idoly.pi.vertx.bedrock.AsyncAwsCredentialsProvider;
 import io.github.idoly.pi.vertx.bedrock.AwsCredentials;
 import io.github.idoly.pi.vertx.bedrock.AwsCredentialsProvider;
 import io.github.idoly.pi.vertx.bedrock.BedrockConverseModelStream;
@@ -30,7 +31,8 @@ public final class VertxModelProviders implements ModelStream, AutoCloseable {
     public VertxModelProviders() {
         this(
                 new VertxSseHttpClient(), new ObjectMapper(),
-                ProviderModelCatalog.bundled(), AwsCredentials::fromEnvironment,
+                ProviderModelCatalog.bundled(),
+                AsyncAwsCredentialsProvider.from(AwsCredentials::fromEnvironment),
                 true
         );
     }
@@ -41,7 +43,8 @@ public final class VertxModelProviders implements ModelStream, AutoCloseable {
     ) {
         this(
                 transport, mapper, ProviderModelCatalog.bundled(),
-                AwsCredentials::fromEnvironment, false
+                AsyncAwsCredentialsProvider.from(AwsCredentials::fromEnvironment),
+                false
         );
     }
 
@@ -51,14 +54,28 @@ public final class VertxModelProviders implements ModelStream, AutoCloseable {
             ProviderModelCatalog catalog,
             AwsCredentialsProvider credentials
     ) {
-        this(transport, mapper, catalog, credentials, false);
+        this(
+                transport, mapper, catalog,
+                AsyncAwsCredentialsProvider.from(credentials), false
+        );
+    }
+
+    public static VertxModelProviders withAsyncAwsCredentials(
+            VertxSseHttpClient transport,
+            ObjectMapper mapper,
+            ProviderModelCatalog catalog,
+            AsyncAwsCredentialsProvider credentials
+    ) {
+        return new VertxModelProviders(
+                transport, mapper, catalog, credentials, false
+        );
     }
 
     private VertxModelProviders(
             VertxSseHttpClient transport,
             ObjectMapper mapper,
             ProviderModelCatalog catalog,
-            AwsCredentialsProvider credentials,
+            AsyncAwsCredentialsProvider credentials,
             boolean ownsTransport
     ) {
         this.transport = Objects.requireNonNull(transport, "transport");
@@ -71,7 +88,9 @@ public final class VertxModelProviders implements ModelStream, AutoCloseable {
                 new AnthropicMessagesModelStream(transport, mapper),
                 new GoogleGenerativeModelStream(transport, mapper),
                 new MistralConversationsModelStream(transport, mapper),
-                new BedrockConverseModelStream(transport, mapper, credentials)
+                BedrockConverseModelStream.withAsyncCredentials(
+                        transport, mapper, credentials
+                )
         );
         protocols.forEach(provider -> registry.register(
                 catalogProvider(provider, catalog)
