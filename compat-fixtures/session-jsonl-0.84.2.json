@@ -1,0 +1,90 @@
+{
+  "upstream": {
+    "package": "@earendil-works/pi-agent-core",
+    "version": "0.84.2"
+  },
+  "lines": [
+    {
+      "kind": "header",
+      "version": 4,
+      "id": "oracle",
+      "createdAt": 1767225600000,
+      "cwd": "/workspace",
+      "parentSessionId": "parent",
+      "metadata": {
+        "owner": "test"
+      }
+    },
+    {
+      "kind": "entry",
+      "lane": "main",
+      "id": "message",
+      "type": "message",
+      "parentId": null,
+      "seq": 1,
+      "timestamp": 1767225600000,
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "hello"
+          }
+        ],
+        "timestamp": 1
+      }
+    },
+    {
+      "kind": "lane",
+      "seq": 2,
+      "lane": "thread",
+      "leafId": "message"
+    },
+    {
+      "kind": "record",
+      "type": "operation_started",
+      "id": "run",
+      "lane": "thread",
+      "seq": 3,
+      "timestamp": 1767225600000,
+      "sourceLeafId": "message",
+      "intent": {
+        "kind": "run",
+        "originalPrompt": [],
+        "initialMessages": []
+      }
+    },
+    {
+      "kind": "fact",
+      "seq": 4,
+      "fact": "name",
+      "name": "Oracle"
+    },
+    {
+      "kind": "record",
+      "type": "usage",
+      "id": "usage",
+      "lane": "thread",
+      "seq": 5,
+      "timestamp": 1767225600000,
+      "cause": "adjustment",
+      "usage": {
+        "input": 10,
+        "output": 2,
+        "cacheRead": 3,
+        "cacheWrite": 1,
+        "totalTokens": 13,
+        "cost": {
+          "input": 1,
+          "output": 2,
+          "cacheRead": 3,
+          "cacheWrite": 4,
+          "total": 10
+        }
+      },
+      "details": {
+        "source": "oracle"
+      }
+    }
+  ]
+}

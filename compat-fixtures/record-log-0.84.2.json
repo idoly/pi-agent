@@ -1,0 +1,43 @@
+{
+  "upstream": {
+    "package": "@earendil-works/pi-agent-core",
+    "version": "0.84.2"
+  },
+  "results": {
+    "valid": {
+      "valid": true
+    },
+    "multipleOpenOperations": {
+      "reason": "multiple_open_operations",
+      "message": "Lane main has at least two open operations"
+    },
+    "unknownOperation": {
+      "reason": "unknown_operation",
+      "message": "Record abort references unknown operation missing"
+    },
+    "recordAfterFinish": {
+      "reason": "record_after_finish",
+      "message": "Record abort follows the finish of operation run"
+    },
+    "nonConsecutiveAttempt": {
+      "reason": "non_consecutive_attempt",
+      "message": "assistant attempt attempt is 2; expected 1"
+    },
+    "queueAfterAbort": {
+      "reason": "queue_after_abort",
+      "message": "steer item queued was enqueued after abort"
+    },
+    "invalidQueueCancellation": {
+      "reason": "invalid_queue_cancellation",
+      "message": "Queue cancellation cancel has no pending matching enqueue"
+    },
+    "toolCallMismatch": {
+      "reason": "tool_call_mismatch",
+      "message": "Tool start tool does not match its assistant tool-call ordinal"
+    },
+    "duplicateToolInvocation": {
+      "reason": "duplicate_tool_invocation",
+      "message": "Tool invocation assistant:0 is duplicated"
+    }
+  }
+}

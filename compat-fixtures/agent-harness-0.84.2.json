@@ -1,0 +1,67 @@
+{
+  "upstream": {
+    "package": "@earendil-works/pi-agent-core",
+    "version": "0.84.2"
+  },
+  "defaults": {
+    "name": "main",
+    "leafId": null,
+    "suspended": [],
+    "thinkingLevel": "off",
+    "activeToolNames": [],
+    "retryPolicy": {
+      "enabled": false,
+      "maxRetries": 0,
+      "baseDelayMs": 1000
+    },
+    "compactionSettings": {
+      "enabled": true,
+      "reserveTokens": 16384,
+      "keepRecentTokens": 20000
+    },
+    "steeringMode": "one-at-a-time",
+    "followUpMode": "one-at-a-time"
+  },
+  "unavailable": {
+    "prompt": {
+      "name": "HarnessNotImplemented",
+      "operation": "prompt",
+      "message": "AgentHarness.prompt is not implemented yet"
+    },
+    "compact": {
+      "name": "HarnessNotImplemented",
+      "operation": "compact",
+      "message": "AgentHarness.compact is not implemented yet"
+    },
+    "resume": {
+      "name": "HarnessNotImplemented",
+      "operation": "resume",
+      "message": "AgentHarness.resume is not implemented yet"
+    },
+    "waitForIdle": {
+      "name": "HarnessNotImplemented",
+      "operation": "waitForIdle",
+      "message": "AgentHarness.waitForIdle is not implemented yet"
+    },
+    "watchSession": {
+      "name": "HarnessNotImplemented",
+      "operation": "watchSession",
+      "message": "AgentHarness.watchSession is not implemented yet"
+    }
+  },
+  "restore": {
+    "name": "HarnessNotImplemented",
+    "operation": "create.restore",
+    "message": "AgentHarness.create.restore is not implemented yet"
+  },
+  "closed": {
+    "prompt": {
+      "name": "HarnessClosed",
+      "message": "AgentHarness was closed while the operation was active"
+    },
+    "waitForIdle": {
+      "name": "HarnessClosed",
+      "message": "AgentHarness was closed while the operation was active"
+    }
+  }
+}

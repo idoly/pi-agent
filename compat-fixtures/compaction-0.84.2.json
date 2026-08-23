@@ -1,0 +1,68 @@
+{
+  "upstream": {
+    "package": "@earendil-works/pi-agent-core",
+    "version": "0.84.2"
+  },
+  "estimates": {
+    "messageTokens": [
+      2,
+      6,
+      1201
+    ],
+    "context": {
+      "tokens": 1221,
+      "usageTokens": 20,
+      "trailingTokens": 1201,
+      "lastUsageIndex": 1
+    },
+    "shouldCompact": [
+      true,
+      false
+    ]
+  },
+  "cutPoint": {
+    "firstKeptEntryIndex": 4,
+    "turnStartIndex": 3,
+    "isSplitTurn": true
+  },
+  "preparation": {
+    "previousSummary": "previous summary",
+    "isSplitTurn": true,
+    "tokensBefore": 250,
+    "messagesToSummarize": [
+      "user",
+      "assistant"
+    ],
+    "turnPrefixMessages": [
+      "user"
+    ],
+    "retainedTail": [
+      "assistant"
+    ],
+    "fileLists": {
+      "readFiles": [
+        "old-read.ts"
+      ],
+      "modifiedFiles": [
+        "old-edit.ts",
+        "written.ts"
+      ]
+    },
+    "contextRoles": [
+      "compactionSummary",
+      "user",
+      "assistant",
+      "user",
+      "assistant"
+    ]
+  },
+  "branchPreparation": {
+    "roles": [
+      "user",
+      "assistant"
+    ],
+    "totalTokens": 8
+  },
+  "serialized": "[User]: 12345678\n\n[Assistant thinking]: 1234\n\n[Assistant tool calls]: read(path=\"a.ts\")\n\n[Tool result]: ok",
+  "formattedFiles": "\n\n<read-files>\na.ts\n</read-files>\n\n<modified-files>\nb.ts\n</modified-files>"
+}

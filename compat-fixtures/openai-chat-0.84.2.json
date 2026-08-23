@@ -1,0 +1,349 @@
+{
+  "upstream": {
+    "package": "@earendil-works/pi-ai",
+    "version": "0.84.2"
+  },
+  "request": {
+    "model": "chat-fixture",
+    "messages": [
+      {
+        "role": "developer",
+        "content": "Be precise."
+      },
+      {
+        "role": "user",
+        "content": "calculate"
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "lookup",
+          "description": "Lookup",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "strict": false
+        }
+      }
+    ],
+    "stream": true,
+    "stream_options": {
+      "include_usage": true
+    },
+    "max_completion_tokens": 1024,
+    "reasoning_effort": "high"
+  },
+  "constrainedTool": {
+    "type": "function",
+    "function": {
+      "name": "edit",
+      "description": "Edit",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "path",
+          "offset"
+        ],
+        "additionalProperties": false
+      },
+      "strict": true
+    }
+  },
+  "grammarTool": {
+    "type": "custom",
+    "custom": {
+      "name": "sample_tool",
+      "description": "Sample tool",
+      "format": {
+        "type": "grammar",
+        "grammar": {
+          "syntax": "lark",
+          "definition": "start: /[a-z]+/"
+        }
+      }
+    }
+  },
+  "terminalScenarios": {
+    "earlyEof": {
+      "chunks": [
+        {
+          "id": "chatcmpl-early",
+          "model": "chat-fixture",
+          "choices": [
+            {
+              "index": 0,
+              "delta": {
+                "content": "partial"
+              },
+              "finish_reason": null
+            }
+          ]
+        }
+      ],
+      "includeDone": false,
+      "events": [
+        "start",
+        "text_start",
+        "text_delta",
+        "text_end",
+        "error"
+      ],
+      "message": {
+        "stopReason": "error",
+        "errorMessage": "Stream ended without finish_reason",
+        "responseId": "chatcmpl-early"
+      }
+    },
+    "contentFilter": {
+      "chunks": [
+        {
+          "id": "chatcmpl-filter",
+          "model": "chat-fixture",
+          "choices": [
+            {
+              "index": 0,
+              "delta": {
+                "content": "blocked"
+              },
+              "finish_reason": null
+            }
+          ]
+        },
+        {
+          "id": "chatcmpl-filter",
+          "model": "chat-fixture",
+          "choices": [
+            {
+              "index": 0,
+              "delta": {},
+              "finish_reason": "content_filter"
+            }
+          ]
+        }
+      ],
+      "includeDone": true,
+      "events": [
+        "start",
+        "text_start",
+        "text_delta",
+        "text_end",
+        "error"
+      ],
+      "message": {
+        "stopReason": "error",
+        "errorMessage": "Provider finish_reason: content_filter",
+        "responseId": "chatcmpl-filter",
+        "rawStopReason": "content_filter"
+      }
+    }
+  },
+  "stream": {
+    "chunks": [
+      {
+        "id": "chatcmpl-1",
+        "model": "chat-fixture",
+        "choices": [
+          {
+            "index": 0,
+            "delta": {
+              "role": "assistant",
+              "reasoning_content": "think"
+            },
+            "finish_reason": null
+          }
+        ]
+      },
+      {
+        "id": "chatcmpl-1",
+        "model": "chat-fixture",
+        "choices": [
+          {
+            "index": 0,
+            "delta": {
+              "content": "hello"
+            },
+            "finish_reason": null
+          }
+        ]
+      },
+      {
+        "id": "chatcmpl-1",
+        "model": "chat-fixture",
+        "choices": [
+          {
+            "index": 0,
+            "delta": {
+              "tool_calls": [
+                {
+                  "index": 0,
+                  "id": "call_1",
+                  "type": "function",
+                  "function": {
+                    "name": "lookup",
+                    "arguments": "{\"id\":"
+                  }
+                }
+              ]
+            },
+            "finish_reason": null
+          }
+        ]
+      },
+      {
+        "id": "chatcmpl-1",
+        "model": "chat-fixture",
+        "choices": [
+          {
+            "index": 0,
+            "delta": {
+              "tool_calls": [
+                {
+                  "index": 0,
+                  "function": {
+                    "arguments": "7}"
+                  }
+                }
+              ]
+            },
+            "finish_reason": null
+          }
+        ]
+      },
+      {
+        "id": "chatcmpl-1",
+        "model": "chat-fixture",
+        "choices": [
+          {
+            "index": 0,
+            "delta": {},
+            "finish_reason": "tool_calls"
+          }
+        ]
+      },
+      {
+        "id": "chatcmpl-1",
+        "model": "chat-fixture",
+        "choices": [],
+        "usage": {
+          "prompt_tokens": 10,
+          "completion_tokens": 4,
+          "total_tokens": 14,
+          "prompt_tokens_details": {
+            "cached_tokens": 3
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 2
+          }
+        }
+      }
+    ],
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "thinking_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "thinking_delta",
+        "contentIndex": 0,
+        "delta": "think"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 1
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 1,
+        "delta": "hello"
+      },
+      {
+        "type": "toolcall_start",
+        "contentIndex": 2
+      },
+      {
+        "type": "toolcall_delta",
+        "contentIndex": 2,
+        "delta": "{\"id\":"
+      },
+      {
+        "type": "toolcall_delta",
+        "contentIndex": 2,
+        "delta": "7}"
+      },
+      {
+        "type": "thinking_end",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_end",
+        "contentIndex": 1
+      },
+      {
+        "type": "toolcall_end",
+        "contentIndex": 2
+      },
+      {
+        "type": "done"
+      }
+    ],
+    "message": {
+      "content": [
+        {
+          "type": "thinking",
+          "thinking": "think"
+        },
+        {
+          "type": "text",
+          "text": "hello"
+        },
+        {
+          "type": "toolCall",
+          "id": "call_1",
+          "name": "lookup",
+          "arguments": {
+            "id": 7
+          }
+        }
+      ],
+      "stopReason": "toolUse",
+      "responseId": "chatcmpl-1",
+      "rawStopReason": "tool_calls",
+      "usage": {
+        "input": 7,
+        "output": 4,
+        "cacheRead": 3,
+        "cacheWrite": 0,
+        "reasoning": 2,
+        "totalTokens": 14
+      }
+    }
+  }
+}

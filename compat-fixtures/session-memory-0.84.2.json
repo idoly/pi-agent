@@ -1,0 +1,263 @@
+{
+  "upstream": {
+    "package": "@earendil-works/pi-agent-core",
+    "version": "0.84.2"
+  },
+  "scenario": {
+    "entries": [
+      {
+        "id": "root",
+        "type": "message",
+        "parentId": null,
+        "seq": 1
+      },
+      {
+        "id": "old-note",
+        "type": "custom",
+        "parentId": "root",
+        "seq": 3,
+        "customType": "note",
+        "data": {
+          "value": 1
+        }
+      },
+      {
+        "id": "compact",
+        "type": "compaction",
+        "parentId": "old-note",
+        "seq": 4
+      },
+      {
+        "id": "model",
+        "type": "model_change",
+        "parentId": "compact",
+        "seq": 5
+      },
+      {
+        "id": "thinking",
+        "type": "thinking_level_change",
+        "parentId": "model",
+        "seq": 6
+      },
+      {
+        "id": "tools",
+        "type": "active_tools_change",
+        "parentId": "thinking",
+        "seq": 7
+      },
+      {
+        "id": "new-note",
+        "type": "custom",
+        "parentId": "tools",
+        "seq": 8,
+        "customType": "note",
+        "data": {
+          "value": 2
+        }
+      },
+      {
+        "id": "main-tail",
+        "type": "message",
+        "parentId": "new-note",
+        "seq": 9
+      },
+      {
+        "id": "thread-tail",
+        "type": "message",
+        "parentId": "root",
+        "seq": 10
+      }
+    ],
+    "lanes": [
+      {
+        "lane": "main",
+        "leafId": "main-tail"
+      },
+      {
+        "lane": "thread",
+        "leafId": "thread-tail"
+      }
+    ],
+    "log": [
+      {
+        "kind": "entry",
+        "seq": 1
+      },
+      {
+        "kind": "lane",
+        "seq": 2
+      },
+      {
+        "kind": "entry",
+        "seq": 3
+      },
+      {
+        "kind": "entry",
+        "seq": 4
+      },
+      {
+        "kind": "entry",
+        "seq": 5
+      },
+      {
+        "kind": "entry",
+        "seq": 6
+      },
+      {
+        "kind": "entry",
+        "seq": 7
+      },
+      {
+        "kind": "entry",
+        "seq": 8
+      },
+      {
+        "kind": "entry",
+        "seq": 9
+      },
+      {
+        "kind": "entry",
+        "seq": 10
+      },
+      {
+        "kind": "fact",
+        "seq": 11
+      },
+      {
+        "kind": "fact",
+        "seq": 12
+      },
+      {
+        "kind": "record",
+        "seq": 13
+      },
+      {
+        "kind": "record",
+        "seq": 14
+      },
+      {
+        "kind": "record",
+        "seq": 15
+      },
+      {
+        "kind": "record",
+        "seq": 16
+      },
+      {
+        "kind": "record",
+        "seq": 17
+      }
+    ],
+    "noteIds": [
+      "new-note",
+      "old-note"
+    ],
+    "cursorIds": [
+      "compact",
+      "model"
+    ],
+    "boundedMessageIds": [
+      "main-tail"
+    ],
+    "recordIds": [
+      "thread-run",
+      "usage",
+      "finish",
+      "attempt",
+      "run"
+    ],
+    "runRecordIds": [
+      "attempt",
+      "finish"
+    ],
+    "openMainIds": [],
+    "openThreadIds": [
+      "thread-run"
+    ],
+    "context": {
+      "roles": [
+        "compactionSummary",
+        "user",
+        "assistant",
+        "user"
+      ],
+      "thinkingLevel": "high",
+      "model": {
+        "provider": "openai",
+        "modelId": "gpt-5"
+      },
+      "activeToolNames": [
+        "read",
+        "bash"
+      ]
+    },
+    "stats": {
+      "messageCount": 3,
+      "cachedTokens": 3,
+      "uncachedTokens": 12,
+      "totalTokens": 20,
+      "costTotal": 10
+    },
+    "name": "Source",
+    "label": "checkpoint",
+    "branchFork": {
+      "entries": [
+        "root",
+        "old-note",
+        "compact",
+        "model",
+        "thinking",
+        "tools",
+        "new-note",
+        "main-tail"
+      ],
+      "lanes": [
+        {
+          "lane": "main",
+          "leafId": "main-tail"
+        }
+      ],
+      "stats": {
+        "messageCount": 2,
+        "cachedTokens": 0,
+        "uncachedTokens": 0,
+        "totalTokens": 0,
+        "costTotal": 0
+      },
+      "metadata": {
+        "id": "branch-fork",
+        "parentSessionId": "source"
+      }
+    },
+    "treeFork": {
+      "entries": [
+        "root",
+        "old-note",
+        "compact",
+        "model",
+        "thinking",
+        "tools",
+        "new-note",
+        "main-tail",
+        "thread-tail"
+      ],
+      "lanes": [
+        {
+          "lane": "main",
+          "leafId": "main-tail"
+        },
+        {
+          "lane": "thread",
+          "leafId": "thread-tail"
+        }
+      ],
+      "stats": {
+        "messageCount": 3,
+        "cachedTokens": 0,
+        "uncachedTokens": 0,
+        "totalTokens": 0,
+        "costTotal": 0
+      }
+    }
+  }
+}

@@ -1,0 +1,445 @@
+{
+  "upstream": {
+    "package": "@earendil-works/pi-ai",
+    "version": "0.84.2"
+  },
+  "requestInput": [
+    {
+      "role": "developer",
+      "content": "Be precise."
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "inspect"
+        },
+        {
+          "type": "input_image",
+          "detail": "auto",
+          "image_url": "data:image/png;base64,aGVsbG8="
+        }
+      ]
+    },
+    {
+      "type": "reasoning",
+      "id": "rs_history",
+      "summary": [
+        {
+          "type": "summary_text",
+          "text": "history thought"
+        }
+      ],
+      "encrypted_content": "history-encrypted"
+    },
+    {
+      "type": "message",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "calling",
+          "annotations": []
+        }
+      ],
+      "status": "completed",
+      "id": "msg_pi_1"
+    },
+    {
+      "type": "function_call",
+      "id": "fc_1",
+      "call_id": "call_1",
+      "name": "lookup",
+      "arguments": "{\"id\":7}"
+    },
+    {
+      "type": "function_call_output",
+      "call_id": "call_1",
+      "output": "(no tool output)"
+    }
+  ],
+  "foreignToolInput": [
+    {
+      "type": "function_call",
+      "id": "fc_8ijpixmc6z0a",
+      "call_id": "call_bad",
+      "name": "lookup",
+      "arguments": "{\"id\":7}"
+    },
+    {
+      "type": "function_call_output",
+      "call_id": "call_bad",
+      "output": "ok"
+    }
+  ],
+  "grammar": {
+    "declaration": {
+      "type": "custom",
+      "name": "sample_tool",
+      "description": "Sample tool",
+      "format": {
+        "type": "grammar",
+        "syntax": "lark",
+        "definition": "start: /[a-z]+/"
+      }
+    },
+    "replay": [
+      {
+        "type": "custom_tool_call",
+        "id": "ctc_1",
+        "call_id": "call_1",
+        "name": "sample_tool",
+        "input": "abc"
+      },
+      {
+        "type": "custom_tool_call_output",
+        "call_id": "call_1",
+        "output": "done"
+      }
+    ],
+    "frames": [
+      {
+        "type": "response.output_item.added",
+        "output_index": 0,
+        "item": {
+          "type": "custom_tool_call",
+          "call_id": "call_1",
+          "id": "ctc_1",
+          "name": "sample_tool",
+          "input": ""
+        }
+      },
+      {
+        "type": "response.custom_tool_call_input.delta",
+        "output_index": 0,
+        "item_id": "ctc_1",
+        "delta": "ab"
+      },
+      {
+        "type": "response.custom_tool_call_input.done",
+        "output_index": 0,
+        "item_id": "ctc_1",
+        "input": "abc"
+      },
+      {
+        "type": "response.output_item.done",
+        "output_index": 0,
+        "item": {
+          "type": "custom_tool_call",
+          "call_id": "call_1",
+          "id": "ctc_1",
+          "name": "sample_tool",
+          "input": "abc"
+        }
+      },
+      {
+        "type": "response.completed",
+        "response": {
+          "status": "completed",
+          "usage": {
+            "input_tokens": 1,
+            "output_tokens": 1,
+            "total_tokens": 2
+          }
+        }
+      }
+    ],
+    "deltas": [
+      "{\"payload\":\"ab",
+      "c\"}"
+    ],
+    "content": [
+      {
+        "type": "toolCall",
+        "id": "call_1|ctc_1",
+        "name": "sample_tool",
+        "arguments": {
+          "payload": "abc"
+        }
+      }
+    ],
+    "stopReason": "toolUse"
+  },
+  "terminalScenarios": {
+    "earlyEof": {
+      "frames": [
+        {
+          "type": "response.created",
+          "response": {
+            "id": "resp_early"
+          }
+        }
+      ],
+      "events": [
+        "start",
+        "error"
+      ],
+      "message": {
+        "stopReason": "error",
+        "errorMessage": "OpenAI Responses stream ended before a terminal response event",
+        "responseId": "resp_early"
+      }
+    },
+    "contentFilter": {
+      "frames": [
+        {
+          "type": "response.incomplete",
+          "response": {
+            "id": "resp_filter",
+            "status": "incomplete",
+            "incomplete_details": {
+              "reason": "content_filter"
+            }
+          }
+        }
+      ],
+      "events": [
+        "start",
+        "error"
+      ],
+      "message": {
+        "stopReason": "error",
+        "errorMessage": "Response incomplete: content_filter",
+        "responseId": "resp_filter",
+        "rawStopReason": "incomplete.content_filter"
+      }
+    },
+    "failed": {
+      "frames": [
+        {
+          "type": "response.failed",
+          "response": {
+            "id": "resp_failed",
+            "status": "failed",
+            "error": {
+              "code": "server_error",
+              "message": "boom"
+            }
+          }
+        }
+      ],
+      "events": [
+        "start",
+        "error"
+      ],
+      "message": {
+        "stopReason": "error",
+        "errorMessage": "server_error: boom",
+        "rawStopReason": "failed"
+      }
+    }
+  },
+  "stream": {
+    "frames": [
+      {
+        "type": "response.output_item.added",
+        "output_index": 0,
+        "item": {
+          "type": "reasoning",
+          "id": "rs_1",
+          "summary": []
+        }
+      },
+      {
+        "type": "response.reasoning_summary_text.delta",
+        "output_index": 0,
+        "delta": "live thought"
+      },
+      {
+        "type": "response.output_item.done",
+        "output_index": 0,
+        "item": {
+          "type": "reasoning",
+          "id": "rs_1",
+          "summary": [
+            {
+              "type": "summary_text",
+              "text": "final thought"
+            }
+          ]
+        }
+      },
+      {
+        "type": "response.output_item.added",
+        "output_index": 1,
+        "item": {
+          "type": "message",
+          "id": "msg_1",
+          "role": "assistant",
+          "status": "in_progress",
+          "content": []
+        }
+      },
+      {
+        "type": "response.output_text.delta",
+        "output_index": 1,
+        "delta": "hel"
+      },
+      {
+        "type": "response.output_item.done",
+        "output_index": 1,
+        "item": {
+          "type": "message",
+          "id": "msg_1",
+          "role": "assistant",
+          "status": "completed",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "hello",
+              "annotations": []
+            }
+          ]
+        }
+      },
+      {
+        "type": "response.output_item.added",
+        "output_index": 2,
+        "item": {
+          "type": "function_call",
+          "id": "fc_2",
+          "call_id": "call_2",
+          "name": "lookup",
+          "arguments": ""
+        }
+      },
+      {
+        "type": "response.function_call_arguments.delta",
+        "output_index": 2,
+        "delta": "{\"id\":"
+      },
+      {
+        "type": "response.function_call_arguments.done",
+        "output_index": 2,
+        "arguments": "{\"id\":9}"
+      },
+      {
+        "type": "response.output_item.done",
+        "output_index": 2,
+        "item": {
+          "type": "function_call",
+          "id": "fc_2",
+          "call_id": "call_2",
+          "name": "lookup",
+          "arguments": "{\"id\":9}"
+        }
+      },
+      {
+        "type": "response.completed",
+        "response": {
+          "id": "resp_1",
+          "status": "completed",
+          "output": [
+            {
+              "type": "reasoning",
+              "id": "rs_1",
+              "summary": [],
+              "encrypted_content": "terminal-encrypted"
+            }
+          ],
+          "usage": {
+            "input_tokens": 8,
+            "output_tokens": 3,
+            "total_tokens": 11,
+            "input_tokens_details": {
+              "cached_tokens": 2,
+              "cache_write_tokens": 1
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 1
+            }
+          }
+        }
+      }
+    ],
+    "events": [
+      {
+        "type": "thinking_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "thinking_delta",
+        "contentIndex": 0,
+        "delta": "live thought"
+      },
+      {
+        "type": "thinking_end",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 1
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 1,
+        "delta": "hel"
+      },
+      {
+        "type": "text_end",
+        "contentIndex": 1
+      },
+      {
+        "type": "toolcall_start",
+        "contentIndex": 2
+      },
+      {
+        "type": "toolcall_delta",
+        "contentIndex": 2,
+        "delta": "{\"id\":"
+      },
+      {
+        "type": "toolcall_delta",
+        "contentIndex": 2,
+        "delta": "9}"
+      },
+      {
+        "type": "toolcall_end",
+        "contentIndex": 2
+      }
+    ],
+    "message": {
+      "content": [
+        {
+          "type": "thinking",
+          "thinking": "final thought",
+          "signature": {
+            "type": "reasoning",
+            "id": "rs_1",
+            "summary": [
+              {
+                "type": "summary_text",
+                "text": "final thought"
+              }
+            ],
+            "encrypted_content": "terminal-encrypted"
+          }
+        },
+        {
+          "type": "text",
+          "text": "hello"
+        },
+        {
+          "type": "toolCall",
+          "id": "call_2|fc_2",
+          "name": "lookup",
+          "arguments": {
+            "id": 9
+          }
+        }
+      ],
+      "stopReason": "toolUse",
+      "responseId": "resp_1",
+      "rawStopReason": "completed",
+      "usage": {
+        "input": 5,
+        "output": 3,
+        "cacheRead": 2,
+        "cacheWrite": 1,
+        "reasoning": 1,
+        "totalTokens": 11
+      }
+    }
+  }
+}
