@@ -1,6 +1,6 @@
-# pi-java
+# pi-agent
 
-Java 25 port of pi under the `io.github.idoly` Maven group, starting with the `@earendil-works/pi-agent-core` runtime contract.
+`pi-agent` is a Java 25 port of pi under the `io.github.idoly` Maven group, starting with the `@earendil-works/pi-agent-core` runtime contract.
 
 ## 使用手册
 

@@ -9,8 +9,8 @@
   <version>0.1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
-  <name>pi-agent Java</name>
-  <description>Java port of pi agent core, providers, and durable sessions</description>
+  <name>pi-agent</name>
+  <description>Java 25 port of pi agent core, providers, and durable sessions</description>
   <url>https://github.com/idoly/pi-agent</url>
 
   <licenses>
