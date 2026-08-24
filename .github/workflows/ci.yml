@@ -53,8 +53,8 @@ jobs:
           distribution: graalvm
           java-version: '25'
           cache: maven
-      - name: Package
-        run: mvn --batch-mode --no-transfer-progress clean package
+      - name: Install reactor artifacts locally
+        run: mvn --batch-mode --no-transfer-progress clean install
       - name: Dependency boundaries
         shell: bash
         run: |
@@ -80,8 +80,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mvn --batch-mode --no-transfer-progress -q -pl vertx -am dependency:build-classpath -Dmdep.outputFile="$GITHUB_WORKSPACE/target/example-classpath.txt"
-          javac --release 25 -cp "ai/target/classes:core/target/classes:vertx/target/classes:$(cat target/example-classpath.txt)" -d target/example-classes examples/HeadlessExtensionHost.java examples/HeadlessAgentRuntime.java
+          if ! output=$(mvn --batch-mode --no-transfer-progress -q -pl vertx dependency:build-classpath -Dmdep.outputFile="$GITHUB_WORKSPACE/target/example-classpath.txt" 2>&1); then
+            escaped=$(printf '%s' "$output" | sed 's/%/%25/g; s/\r/%0D/g; s/$/%0A/')
+            echo "::error title=Example classpath::$escaped"
+            exit 1
+          fi
+          if ! output=$(javac --release 25 -cp "ai/target/classes:core/target/classes:vertx/target/classes:$(cat target/example-classpath.txt)" -d target/example-classes examples/HeadlessExtensionHost.java examples/HeadlessAgentRuntime.java 2>&1); then
+            escaped=$(printf '%s' "$output" | sed 's/%/%25/g; s/\r/%0D/g; s/$/%0A/')
+            echo "::error title=Example compilation::$escaped"
+            exit 1
+          fi
       - name: Verify disabled live-test profile wiring
         shell: bash
         env:
