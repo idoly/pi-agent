@@ -1843,28 +1843,31 @@ public final class JsonlSessionRepository implements SessionRepository {
                         StandardWatchEventKinds.ENTRY_CREATE,
                         StandardWatchEventKinds.ENTRY_MODIFY
                 );
-                if (Files.exists(marker)) {
+                MarkerStamp observed = markerStamp(marker);
+                if (observed != null) {
                     notify.run();
                     if (signaled.get()) return true;
                 }
                 while (!closed.get() && !signaled.get()) {
                     WatchKey key;
                     try {
-                        key = watcher.take();
+                        key = watcher.poll(
+                                100, java.util.concurrent.TimeUnit.MILLISECONDS
+                        );
                     } catch (InterruptedException ignored) {
                         return true;
                     }
-                    boolean candidate = false;
-                    for (WatchEvent<?> event : key.pollEvents()) {
-                        if (event.kind() == StandardWatchEventKinds.OVERFLOW
-                                || marker.getFileName().equals(event.context())) {
-                            candidate = true;
-                        }
+                    if (key != null) {
+                        key.pollEvents();
+                        if (!key.reset()) return false;
                     }
-                    if (!key.reset()) return false;
-                    if (candidate && Files.exists(marker)) {
-                        notify.run();
-                        if (signaled.get()) return true;
+                    MarkerStamp current = markerStamp(marker);
+                    if (!java.util.Objects.equals(current, observed)) {
+                        observed = current;
+                        if (current != null) {
+                            notify.run();
+                            if (signaled.get()) return true;
+                        }
                     }
                 }
                 return true;
