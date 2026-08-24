@@ -168,6 +168,25 @@ class OpenAiChatCodecTest {
     }
 
     @Test
+    void ignoresSemanticDeltasAfterFinishButAcceptsTailUsage() {
+        List<AssistantStreamEvent> events = codec.decode(
+                Multi.createFrom().items(
+                        data("{\"choices\":[{\"delta\":{\"content\":\"final\"},\"finish_reason\":\"stop\"}]}"),
+                        data("{\"choices\":[{\"delta\":{\"content\":\"late\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":3,\"completion_tokens\":1,\"total_tokens\":4}}"),
+                        data("[DONE]")
+                ), MODEL
+        ).collect().asList().await().indefinitely();
+        AssistantMessage done = ((AssistantStreamEvent.Done)
+                events.getLast()).message();
+        assertEquals("final", assertInstanceOf(
+                TextContent.class, done.content().getFirst()
+        ).text());
+        assertEquals(4, done.usage().totalTokens());
+        assertEquals(1, events.stream()
+                .filter(AssistantStreamEvent.Done.class::isInstance).count());
+    }
+
+    @Test
     void preservesAndReplaysStructuredReasoningDetails() throws Exception {
         String signed = "{\"type\":\"reasoning.text\",\"text\":\"signed thought\","
                 + "\"signature\":\"sha256:signed\",\"id\":\"reasoning-text-1\","

@@ -10,10 +10,12 @@ import io.github.idoly.pi.vertx.SseEvent;
 import io.smallrye.mutiny.Multi;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Structured Anthropic Messages request and streaming event codec. */
@@ -29,30 +31,47 @@ public final class AnthropicMessagesCodec {
             ModelContext context,
             String thinkingLevel
     ) {
+        return encodeRequest(model, context, thinkingLevel, null);
+    }
+
+    public ObjectNode encodeRequest(
+            Model model,
+            ModelContext context,
+            String thinkingLevel,
+            CacheRetention cacheRetention
+    ) {
         ObjectNode request = mapper.createObjectNode()
                 .put("model", model.id())
                 .put("max_tokens", model.maxTokens())
                 .put("stream", true);
+        ObjectNode cacheControl = cacheControl(cacheRetention);
         if (!context.systemPrompt().isBlank()) {
-            request.putArray("system").addObject()
+            ObjectNode system = request.putArray("system").addObject()
                     .put("type", "text")
-                    .put("text", context.systemPrompt())
-                    .putObject("cache_control")
-                    .put("type", "ephemeral");
-        }
-        request.set("messages", encodeMessages(model, context.messages()));
-        if (!context.tools().isEmpty()) {
-            ArrayNode tools = request.putArray("tools");
-            for (ToolDefinition tool : context.tools()) {
-                ObjectNode encoded = tools.addObject()
-                        .put("name", tool.name())
-                        .put("description", tool.description())
-                        .put("eager_input_streaming", true);
-                encoded.set("input_schema", mapper.valueToTree(tool.parameters()));
+                    .put("text", context.systemPrompt());
+            if (cacheControl != null) {
+                system.set("cache_control", cacheControl.deepCopy());
             }
-            ((ObjectNode) tools.get(tools.size() - 1))
-                    .putObject("cache_control")
-                    .put("type", "ephemeral");
+        }
+        ToolPlacement placement = toolPlacement(model, context);
+        request.set("messages", encodeMessages(
+                model, context.messages(), placement.deferredNames(),
+                cacheControl
+        ));
+        if (!placement.immediate().isEmpty()
+                || !placement.deferred().isEmpty()) {
+            ArrayNode tools = request.putArray("tools");
+            for (ToolDefinition tool : placement.immediate()) {
+                encodeTool(tools, tool, false);
+            }
+            if (!placement.immediate().isEmpty() && cacheControl != null) {
+                ((ObjectNode) tools.get(tools.size() - 1)).set(
+                        "cache_control", cacheControl.deepCopy()
+                );
+            }
+            for (ToolDefinition tool : placement.deferred()) {
+                encodeTool(tools, tool, true);
+            }
         }
         if (model.reasoning() && thinkingLevel != null
                 && !thinkingLevel.equals("off")) {
@@ -73,6 +92,85 @@ public final class AnthropicMessagesCodec {
                     .put("display", "summarized");
         }
         return request;
+    }
+
+    private ObjectNode cacheControl(CacheRetention requested) {
+        CacheRetention retention = requested;
+        if (retention == null) {
+            retention = "long".equals(System.getenv("PI_CACHE_RETENTION"))
+                    ? CacheRetention.LONG : CacheRetention.SHORT;
+        }
+        if (retention == CacheRetention.NONE) return null;
+        ObjectNode control = mapper.createObjectNode().put("type", "ephemeral");
+        if (retention == CacheRetention.LONG) control.put("ttl", "1h");
+        return control;
+    }
+
+    private ToolPlacement toolPlacement(Model model, ModelContext context) {
+        LinkedHashMap<String, ToolDefinition> unique = new LinkedHashMap<>();
+        context.tools().forEach(tool -> unique.put(tool.name(), tool));
+        if (!supportsToolReferences(model)) {
+            return new ToolPlacement(
+                    List.copyOf(unique.values()), List.of(), Set.of()
+            );
+        }
+        Set<String> used = new HashSet<>();
+        Set<String> deferredNames = new HashSet<>();
+        for (Message message : context.messages()) {
+            if (message instanceof AssistantMessage assistant) {
+                assistant.content().stream()
+                        .filter(ToolCallContent.class::isInstance)
+                        .map(ToolCallContent.class::cast)
+                        .map(ToolCallContent::name)
+                        .forEach(used::add);
+            } else if (message instanceof ToolResultMessage result) {
+                result.addedToolNames().stream()
+                        .filter(name -> !used.contains(name))
+                        .forEach(deferredNames::add);
+            }
+        }
+        ArrayList<ToolDefinition> immediate = new ArrayList<>();
+        ArrayList<ToolDefinition> deferred = new ArrayList<>();
+        unique.forEach((name, tool) -> (deferredNames.contains(name)
+                ? deferred : immediate).add(tool));
+        if (immediate.isEmpty() && !deferred.isEmpty()) {
+            immediate.addAll(deferred);
+            deferred.clear();
+            deferredNames.clear();
+        }
+        Set<String> effectiveNames = deferred.stream()
+                .map(ToolDefinition::name)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        return new ToolPlacement(
+                List.copyOf(immediate), List.copyOf(deferred), effectiveNames
+        );
+    }
+
+    private void encodeTool(
+            ArrayNode tools,
+            ToolDefinition tool,
+            boolean deferred
+    ) {
+        ObjectNode encoded = tools.addObject()
+                .put("name", tool.name())
+                .put("description", tool.description())
+                .put("eager_input_streaming", true);
+        encoded.set("input_schema", mapper.valueToTree(tool.parameters()));
+        if (deferred) encoded.put("defer_loading", true);
+    }
+
+    private static boolean supportsToolReferences(Model model) {
+        if (!model.provider().equals("anthropic")
+                || model.id().contains("haiku")) return false;
+        java.util.regex.Matcher version = java.util.regex.Pattern.compile(
+                "^claude-(?:opus|sonnet|fable)-(\\d+)(?:-(\\d+))?(?:-|$)"
+        ).matcher(model.id());
+        if (!version.find()) return false;
+        int major = Integer.parseInt(version.group(1));
+        String minorText = version.group(2);
+        int minor = minorText != null && minorText.length() < 8
+                ? Integer.parseInt(minorText) : 0;
+        return major > 4 || major == 4 && minor >= 5;
     }
 
     public Multi<AssistantStreamEvent> decode(
@@ -109,8 +207,14 @@ public final class AnthropicMessagesCodec {
                 ));
     }
 
-    private ArrayNode encodeMessages(Model model, List<Message> messages) {
+    private ArrayNode encodeMessages(
+            Model model,
+            List<Message> messages,
+            Set<String> deferredToolNames,
+            ObjectNode cacheControl
+    ) {
         ArrayNode result = mapper.createArrayNode();
+        Set<String> loadedToolNames = new HashSet<>();
         for (int index = 0; index < messages.size(); index++) {
             Message message = messages.get(index);
             switch (message) {
@@ -157,31 +261,70 @@ public final class AnthropicMessagesCodec {
                 }
                 case ToolResultMessage toolResult -> {
                     ArrayNode content = mapper.createArrayNode();
-                    content.add(encodeToolResult(toolResult));
+                    ArrayNode siblingContent = mapper.createArrayNode();
+                    ToolResultEncoding encoded = encodeToolResult(
+                            toolResult, deferredToolNames, loadedToolNames
+                    );
+                    content.add(encoded.block());
+                    siblingContent.addAll(encoded.siblings());
                     while (index + 1 < messages.size()
                             && messages.get(index + 1) instanceof ToolResultMessage next) {
-                        content.add(encodeToolResult(next));
+                        encoded = encodeToolResult(
+                                next, deferredToolNames, loadedToolNames
+                        );
+                        content.add(encoded.block());
+                        siblingContent.addAll(encoded.siblings());
                         index++;
                     }
+                    content.addAll(siblingContent);
                     result.addObject().put("role", "user")
                             .set("content", content);
                 }
             }
         }
-        addConversationCacheControl(result);
+        addConversationCacheControl(result, cacheControl);
         return result;
     }
 
-    private ObjectNode encodeToolResult(ToolResultMessage toolResult) {
+    private ToolResultEncoding encodeToolResult(
+            ToolResultMessage toolResult,
+            Set<String> deferredToolNames,
+            Set<String> loadedToolNames
+    ) {
         ObjectNode block = mapper.createObjectNode()
                 .put("type", "tool_result")
                 .put("tool_use_id", toolResult.toolCallId())
                 .put("is_error", toolResult.error());
-        block.set("content", encodeUserContent(toolResult.content()));
-        return block;
+        ArrayNode references = mapper.createArrayNode();
+        for (String name : toolResult.addedToolNames()) {
+            if (deferredToolNames.contains(name)
+                    && loadedToolNames.add(name)) {
+                references.addObject()
+                        .put("type", "tool_reference")
+                        .put("tool_name", name);
+            }
+        }
+        JsonNode ordinary = encodeUserContent(toolResult.content());
+        ArrayNode siblings = mapper.createArrayNode();
+        if (references.isEmpty()) {
+            block.set("content", ordinary);
+        } else {
+            block.set("content", references);
+            if (ordinary.isTextual()) {
+                siblings.addObject().put("type", "text")
+                        .put("text", ordinary.asText());
+            } else if (ordinary.isArray()) {
+                siblings.addAll((ArrayNode) ordinary);
+            }
+        }
+        return new ToolResultEncoding(block, siblings);
     }
 
-    private void addConversationCacheControl(ArrayNode messages) {
+    private void addConversationCacheControl(
+            ArrayNode messages,
+            ObjectNode cacheControl
+    ) {
+        if (cacheControl == null) return;
         if (messages.isEmpty()) return;
         JsonNode last = messages.get(messages.size() - 1);
         if (!"user".equals(last.path("role").asText())) return;
@@ -202,7 +345,7 @@ public final class AnthropicMessagesCodec {
         } else {
             return;
         }
-        block.putObject("cache_control").put("type", "ephemeral");
+        block.set("cache_control", cacheControl.deepCopy());
     }
 
     private JsonNode encodeUserContent(List<ContentBlock> blocks) {
@@ -238,6 +381,19 @@ public final class AnthropicMessagesCodec {
             result.addObject().put("type", "text").put("text", "");
         }
         return result;
+    }
+
+    private record ToolPlacement(
+            List<ToolDefinition> immediate,
+            List<ToolDefinition> deferred,
+            Set<String> deferredNames
+    ) {
+    }
+
+    private record ToolResultEncoding(
+            ObjectNode block,
+            ArrayNode siblings
+    ) {
     }
 
     private static final class State {

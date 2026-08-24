@@ -139,6 +139,54 @@ await consume(anthropic.streamSimple(
   },
 ));
 
+const anthropicDeferredModel = {
+  ...anthropicModel,
+  id: "claude-sonnet-4-5",
+};
+const anthropicDeferredContext = {
+  systemPrompt: "system",
+  messages: [
+    { role: "user", content: "hello", timestamp: 1 },
+    { role: "assistant", api: anthropicDeferredModel.api,
+      provider: anthropicDeferredModel.provider, model: anthropicDeferredModel.id,
+      usage: zeroUsage, stopReason: "toolUse", timestamp: 2,
+      content: [{ type: "toolCall", id: "call-lookup", name: "lookup", arguments: { q: "x" } }] },
+    { role: "toolResult", toolCallId: "call-lookup", toolName: "lookup",
+      content: [{ type: "text", text: "lookup result" }], addedToolNames: ["fetch"],
+      isError: false, timestamp: 3 },
+  ],
+  tools: [tool, secondTool],
+};
+async function anthropicRequest(context, options = {}) {
+  let payload;
+  await consume(anthropic.streamSimple(
+    anthropicDeferredModel, context,
+    {
+      apiKey: "fixture-key", maxTokens: anthropicDeferredModel.maxTokens,
+      reasoning: "medium", ...options,
+      onPayload(value) { payload = value; },
+      fetch: async () => new Response(anthropicErrorSse, { status: 200, headers: { "content-type": "text/event-stream" } }),
+    },
+  ));
+  return payload;
+}
+const anthropicDeferredPayload = await anthropicRequest(
+  anthropicDeferredContext,
+  { cacheRetention: "short" },
+);
+const anthropicAllDeferredPayload = await anthropicRequest(
+  { ...anthropicDeferredContext, tools: [secondTool] },
+  { cacheRetention: "short" },
+);
+const anthropicLongCachePayload = await anthropicRequest(
+  { systemPrompt: "system", messages: [{ role: "user", content: "hello", timestamp: 1 }], tools: [tool] },
+  { cacheRetention: "long" },
+);
+const anthropicNoCachePayload = await anthropicRequest(
+  { systemPrompt: "system", messages: [{ role: "user", content: "hello", timestamp: 1 }], tools: [tool] },
+  { cacheRetention: "none" },
+);
+
 const googleModel = {
   id: "gemini-3-pro", name: "Gemini Fixture", api: "google-generative-ai",
   provider: "google", baseUrl: "https://generativelanguage.googleapis.com/v1beta",
@@ -263,6 +311,10 @@ const fixture = {
   anthropic: {
     request: anthropicPayload,
     cachePlacementRequest: anthropicCachePlacementPayload,
+    deferredToolsRequest: anthropicDeferredPayload,
+    allDeferredFallbackRequest: anthropicAllDeferredPayload,
+    longCacheRequest: anthropicLongCachePayload,
+    noCacheRequest: anthropicNoCachePayload,
     frames: anthropicFrames.map(([, data]) => data),
     ...anthropicResult,
     streamError: { payload: anthropicErrorPayload, ...anthropicErrorResult },

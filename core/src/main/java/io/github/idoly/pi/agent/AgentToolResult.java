@@ -11,14 +11,26 @@ public record AgentToolResult(
         List<ContentBlock> content,
         Map<String, Object> details,
         Usage usage,
+        List<String> addedToolNames,
         boolean terminate
 ) {
+    public AgentToolResult(
+            List<ContentBlock> content,
+            Map<String, Object> details,
+            Usage usage,
+            boolean terminate
+    ) {
+        this(content, details, usage, List.of(), terminate);
+    }
+
     public AgentToolResult {
         content = List.copyOf(Objects.requireNonNull(content, "content"));
         details = details == null ? Map.of() : Map.copyOf(details);
+        addedToolNames = addedToolNames == null
+                ? List.of() : List.copyOf(addedToolNames);
     }
 
     public AgentToolResult(List<ContentBlock> content, Map<String, Object> details) {
-        this(content, details, null, false);
+        this(content, details, null, List.of(), false);
     }
 }

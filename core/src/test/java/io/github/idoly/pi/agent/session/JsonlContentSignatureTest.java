@@ -48,6 +48,35 @@ class JsonlContentSignatureTest {
         assertFalse(unsignedJson.contains("signature"));
     }
 
+    @Test
+    void roundTripsAddedToolNamesWithoutChangingEmptyWireShape() {
+        ToolResultMessage added = new ToolResultMessage(
+                "call", "search", List.of(new TextContent("loaded")),
+                Map.of(), null, List.of("fetch", "read"), false, 2
+        );
+        SessionLogItem item = new SessionLogItem.Entry(
+                1, new SessionEntry.Message(
+                        "entry", null, 1, 2, added, false
+                ), "main"
+        );
+        String encoded = JsonlSessionCodec.encodeMutation(item);
+        assertTrue(encoded.contains("addedToolNames"));
+        assertEquals(item, JsonlSessionCodec.decodeMutation(encoded));
+
+        ToolResultMessage unchanged = new ToolResultMessage(
+                "call", "search", List.of(new TextContent("loaded")),
+                Map.of(), null, false, 2
+        );
+        String oldShape = JsonlSessionCodec.encodeMutation(
+                new SessionLogItem.Entry(
+                        1, new SessionEntry.Message(
+                                "entry", null, 1, 2, unchanged, false
+                        ), "main"
+                )
+        );
+        assertFalse(oldShape.contains("addedToolNames"));
+    }
+
     private static int occurrences(String value, String target) {
         int count = 0;
         int offset = 0;

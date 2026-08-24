@@ -271,6 +271,7 @@ public interface io.github.idoly.pi.agent.AgentTool {
 ## io.github.idoly.pi.agent.AgentToolResult
 public final class io.github.idoly.pi.agent.AgentToolResult extends java.lang.Record {
   public io.github.idoly.pi.agent.AgentToolResult(java.util.List<io.github.idoly.pi.ai.ContentBlock>, java.util.Map<java.lang.String, java.lang.Object>, io.github.idoly.pi.ai.Usage, boolean);
+  public io.github.idoly.pi.agent.AgentToolResult(java.util.List<io.github.idoly.pi.ai.ContentBlock>, java.util.Map<java.lang.String, java.lang.Object>, io.github.idoly.pi.ai.Usage, java.util.List<java.lang.String>, boolean);
   public io.github.idoly.pi.agent.AgentToolResult(java.util.List<io.github.idoly.pi.ai.ContentBlock>, java.util.Map<java.lang.String, java.lang.Object>);
   public final java.lang.String toString();
   public final int hashCode();
@@ -278,6 +279,7 @@ public final class io.github.idoly.pi.agent.AgentToolResult extends java.lang.Re
   public java.util.List<io.github.idoly.pi.ai.ContentBlock> content();
   public java.util.Map<java.lang.String, java.lang.Object> details();
   public io.github.idoly.pi.ai.Usage usage();
+  public java.util.List<java.lang.String> addedToolNames();
   public boolean terminate();
 }
 
@@ -3456,6 +3458,15 @@ public final class io.github.idoly.pi.ai.AssistantStreamEvent$Start extends java
   public io.github.idoly.pi.ai.AssistantMessage partial();
 }
 
+## io.github.idoly.pi.ai.CacheRetention
+public final class io.github.idoly.pi.ai.CacheRetention extends java.lang.Enum<io.github.idoly.pi.ai.CacheRetention> {
+  public static final io.github.idoly.pi.ai.CacheRetention NONE;
+  public static final io.github.idoly.pi.ai.CacheRetention SHORT;
+  public static final io.github.idoly.pi.ai.CacheRetention LONG;
+  public static io.github.idoly.pi.ai.CacheRetention[] values();
+  public static io.github.idoly.pi.ai.CacheRetention valueOf(java.lang.String);
+}
+
 ## io.github.idoly.pi.ai.CancellationSignal
 public interface io.github.idoly.pi.ai.CancellationSignal {
   public static final io.github.idoly.pi.ai.CancellationSignal NONE;
@@ -3728,10 +3739,12 @@ public final class io.github.idoly.pi.ai.StopReason extends java.lang.Enum<io.gi
 
 ## io.github.idoly.pi.ai.StreamOptions
 public final class io.github.idoly.pi.ai.StreamOptions extends java.lang.Record {
+  public io.github.idoly.pi.ai.StreamOptions(java.lang.String, java.lang.String, java.lang.String, io.github.idoly.pi.ai.CancellationSignal, java.util.Map<java.lang.String, java.lang.String>, io.github.idoly.pi.ai.ProviderRequestHooks);
   public io.github.idoly.pi.ai.StreamOptions(java.lang.String, java.lang.String, java.lang.String, io.github.idoly.pi.ai.CancellationSignal, java.util.Map<java.lang.String, java.lang.String>);
   public io.github.idoly.pi.ai.StreamOptions(java.lang.String, java.lang.String, java.lang.String, io.github.idoly.pi.ai.CancellationSignal);
-  public io.github.idoly.pi.ai.StreamOptions(java.lang.String, java.lang.String, java.lang.String, io.github.idoly.pi.ai.CancellationSignal, java.util.Map<java.lang.String, java.lang.String>, io.github.idoly.pi.ai.ProviderRequestHooks);
+  public io.github.idoly.pi.ai.StreamOptions(java.lang.String, java.lang.String, java.lang.String, io.github.idoly.pi.ai.CancellationSignal, java.util.Map<java.lang.String, java.lang.String>, io.github.idoly.pi.ai.ProviderRequestHooks, io.github.idoly.pi.ai.CacheRetention);
   public io.github.idoly.pi.ai.StreamOptions withRequestHooks(io.github.idoly.pi.ai.ProviderRequestHooks);
+  public io.github.idoly.pi.ai.StreamOptions withCacheRetention(io.github.idoly.pi.ai.CacheRetention);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
@@ -3741,6 +3754,7 @@ public final class io.github.idoly.pi.ai.StreamOptions extends java.lang.Record 
   public io.github.idoly.pi.ai.CancellationSignal cancellation();
   public java.util.Map<java.lang.String, java.lang.String> headers();
   public io.github.idoly.pi.ai.ProviderRequestHooks requestHooks();
+  public io.github.idoly.pi.ai.CacheRetention cacheRetention();
 }
 
 ## io.github.idoly.pi.ai.TextContent
@@ -3813,6 +3827,7 @@ public final class io.github.idoly.pi.ai.ToolDefinition extends java.lang.Record
 ## io.github.idoly.pi.ai.ToolResultMessage
 public final class io.github.idoly.pi.ai.ToolResultMessage extends java.lang.Record implements io.github.idoly.pi.ai.Message {
   public io.github.idoly.pi.ai.ToolResultMessage(java.lang.String, java.lang.String, java.util.List<io.github.idoly.pi.ai.ContentBlock>, java.util.Map<java.lang.String, java.lang.Object>, io.github.idoly.pi.ai.Usage, boolean, long);
+  public io.github.idoly.pi.ai.ToolResultMessage(java.lang.String, java.lang.String, java.util.List<io.github.idoly.pi.ai.ContentBlock>, java.util.Map<java.lang.String, java.lang.Object>, io.github.idoly.pi.ai.Usage, java.util.List<java.lang.String>, boolean, long);
   public final java.lang.String toString();
   public final int hashCode();
   public final boolean equals(java.lang.Object);
@@ -3821,6 +3836,7 @@ public final class io.github.idoly.pi.ai.ToolResultMessage extends java.lang.Rec
   public java.util.List<io.github.idoly.pi.ai.ContentBlock> content();
   public java.util.Map<java.lang.String, java.lang.Object> details();
   public io.github.idoly.pi.ai.Usage usage();
+  public java.util.List<java.lang.String> addedToolNames();
   public boolean error();
   public long timestamp();
 }
@@ -3988,6 +4004,7 @@ public final class io.github.idoly.pi.vertx.VertxSseHttpClient implements java.l
 public final class io.github.idoly.pi.vertx.anthropic.AnthropicMessagesCodec {
   public io.github.idoly.pi.vertx.anthropic.AnthropicMessagesCodec(com.fasterxml.jackson.databind.ObjectMapper);
   public com.fasterxml.jackson.databind.node.ObjectNode encodeRequest(io.github.idoly.pi.ai.Model, io.github.idoly.pi.ai.ModelContext, java.lang.String);
+  public com.fasterxml.jackson.databind.node.ObjectNode encodeRequest(io.github.idoly.pi.ai.Model, io.github.idoly.pi.ai.ModelContext, java.lang.String, io.github.idoly.pi.ai.CacheRetention);
   public io.smallrye.mutiny.Multi<io.github.idoly.pi.ai.AssistantStreamEvent> decode(io.smallrye.mutiny.Multi<io.github.idoly.pi.vertx.SseEvent>, io.github.idoly.pi.ai.Model);
 }
 

@@ -36,7 +36,8 @@ final class SessionCopies {
         if (message instanceof ToolResultMessage result) {
             return new ToolResultMessage(
                     result.toolCallId(), result.toolName(), blocks(result.content()),
-                    map(result.details()), result.usage(), result.error(), result.timestamp()
+                    map(result.details()), result.usage(),
+                    result.addedToolNames(), result.error(), result.timestamp()
             );
         }
         if (message instanceof CompactionSummaryMessage summary) {

@@ -116,6 +116,38 @@ class AnthropicMessagesCodecTest {
     }
 
     @Test
+    void rejectsTruncatedToolJsonAndMissingTerminalEvents() {
+        Multi<SseEvent> truncated = Multi.createFrom().items(
+                event("message_start", """
+                        {"type":"message_start","message":{"usage":{}}}
+                        """),
+                event("content_block_start", """
+                        {"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"call","name":"lookup","input":{}}}
+                        """),
+                event("content_block_delta", """
+                        {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"{\\\"q\\\":"}}
+                        """),
+                event("content_block_stop", """
+                        {"type":"content_block_stop","index":0}
+                        """)
+        );
+        assertThrows(IllegalArgumentException.class, () -> codec.decode(
+                truncated, model()
+        ).collect().asList().await().indefinitely());
+
+        IllegalStateException missingTerminal = assertThrows(
+                IllegalStateException.class,
+                () -> codec.decode(
+                        Multi.createFrom().empty(), model()
+                ).collect().asList().await().indefinitely()
+        );
+        assertEquals(
+                "Anthropic stream ended before message_stop",
+                missingTerminal.getMessage()
+        );
+    }
+
+    @Test
     void ignoresFramesAfterEitherTerminalEvent() {
         List<AssistantStreamEvent> afterError = codec.decode(
                 Multi.createFrom().items(

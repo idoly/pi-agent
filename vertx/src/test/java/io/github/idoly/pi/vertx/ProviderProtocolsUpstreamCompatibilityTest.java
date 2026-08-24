@@ -104,6 +104,65 @@ class ProviderProtocolsUpstreamCompatibilityTest {
     }
 
     @Test
+    void anthropicDeferredToolsAndCacheRetentionMatchTypeScriptOracle()
+            throws Exception {
+        Model model = model(
+                "claude-sonnet-4-5", "anthropic-messages", "anthropic",
+                "https://api.anthropic.com", 200_000, 16_384
+        );
+        ModelContext deferredContext = new ModelContext(
+                "system",
+                List.of(
+                        UserMessage.text("hello", 1),
+                        assistant(model, List.of(new ToolCallContent(
+                                "call-lookup", "lookup", Map.of("q", "x")
+                        ))),
+                        new ToolResultMessage(
+                                "call-lookup", "lookup",
+                                List.of(new TextContent("lookup result")),
+                                Map.of(), null, List.of("fetch"), false, 3
+                        )
+                ),
+                List.of(tool(), fetchTool())
+        );
+        AnthropicMessagesCodec codec = new AnthropicMessagesCodec(MAPPER);
+        assertEquals(
+                fixture().path("anthropic").path("deferredToolsRequest"),
+                codec.encodeRequest(
+                        model, deferredContext, "medium", CacheRetention.SHORT
+                )
+        );
+        assertEquals(
+                fixture().path("anthropic")
+                        .path("allDeferredFallbackRequest"),
+                codec.encodeRequest(
+                        model,
+                        new ModelContext(
+                                "system", deferredContext.messages(),
+                                List.of(fetchTool())
+                        ),
+                        "medium", CacheRetention.SHORT
+                )
+        );
+        ModelContext cacheContext = new ModelContext(
+                "system", List.of(UserMessage.text("hello", 1)),
+                List.of(tool())
+        );
+        assertEquals(
+                fixture().path("anthropic").path("longCacheRequest"),
+                codec.encodeRequest(
+                        model, cacheContext, "medium", CacheRetention.LONG
+                )
+        );
+        assertEquals(
+                fixture().path("anthropic").path("noCacheRequest"),
+                codec.encodeRequest(
+                        model, cacheContext, "medium", CacheRetention.NONE
+                )
+        );
+    }
+
+    @Test
     void anthropicStreamErrorMatchesTypeScriptOracle() throws Exception {
         JsonNode expected = fixture().path("anthropic").path("streamError");
         String payload = MAPPER.writeValueAsString(expected.path("payload"));

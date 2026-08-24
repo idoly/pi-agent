@@ -95,7 +95,10 @@ public final class AnthropicMessagesModelStream
         headers = ProviderHeaders.merge(headers, options.headers());
         return ProviderHttpHooks.prepare(
                 mapper, model,
-                codec.encodeRequest(model, context, options.thinkingLevel()),
+                codec.encodeRequest(
+                        model, context, options.thinkingLevel(),
+                        options.cacheRetention()
+                ),
                 headers, options
         ).toMulti().onItem().transformToMultiAndConcatenate(prepared -> {
             byte[] body;

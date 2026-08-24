@@ -30,7 +30,7 @@ each of the three modules. It does not validate signatures or Central Portal
 authorization.
 
 The normal build attaches binary, source, and Javadoc JARs. It also compiles
-`examples/HeadlessExtensionHost.java` in CI and compares the reviewed public API
+`examples/HeadlessExtensionHost.java` and `examples/HeadlessAgentRuntime.java` in CI and compares the reviewed public API
 text baseline. The fixed
 `project.build.outputTimestamp` makes archive timestamps reproducible. CI runs
 the full suite on Linux, macOS, and Windows and checks core dependency

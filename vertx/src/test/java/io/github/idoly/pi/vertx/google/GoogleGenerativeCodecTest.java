@@ -116,6 +116,21 @@ class GoogleGenerativeCodecTest {
     }
 
     @Test
+    void ignoresMalformedSemanticFramesAfterFinish() {
+        List<AssistantStreamEvent> events = codec.decode(
+                Multi.createFrom().items(
+                        event("""
+                                {"candidates":[{"content":{"parts":[{"text":"final"}]},"finishReason":"STOP"}]}
+                                """),
+                        event("not-json-after-finish")
+                ), model("google-generative-ai")
+        ).collect().asList().await().indefinitely();
+        assertInstanceOf(AssistantStreamEvent.Done.class, events.getLast());
+        assertEquals(1, events.stream()
+                .filter(AssistantStreamEvent.Done.class::isInstance).count());
+    }
+
+    @Test
     void supportsExplicitOpaqueVertexBearerTokens() {
         Model vertex = model("google-vertex");
         Map<String, String> headers = GoogleGenerativeModelStream

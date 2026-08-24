@@ -54,6 +54,8 @@ The build attaches binary, source, and Javadoc JARs for all three modules. `tool
 - OpenAI-compatible Chat Completions request, text/tool-call stream, usage, and error codec.
 - OpenAI Responses request and stream codec with encrypted reasoning replay, tool-result images, cache affinity, terminal metadata, and composite tool-call IDs.
 - Unified `VertxModelProviders` routing for OpenAI Chat/Responses, Anthropic Messages, Google AI Studio/Vertex, Amazon Bedrock ConverseStream, and Mistral Conversations over one shared Vert.x connection pool.
+- Anthropic deferred tool loading through durable `addedToolNames` transcript markers, plus explicit `NONE`, `SHORT`, and `LONG` prompt-cache retention.
+- Host-managed opaque Vertex OAuth tokens and cancellable asynchronous AWS credential resolution without provider SDK dependencies.
 - Awaited framework-neutral provider header/payload/response middleware with no Jackson or Vert.x types in Core.
 - OpenAI Chat/Responses response IDs, raw stop reasons, reasoning-token usage, and differential terminal-error behavior.
 - Structured Chat `reasoning_details` signature preservation and stateless replay.

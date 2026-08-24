@@ -17,6 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Flow;
@@ -138,6 +139,7 @@ public final class BedrockConverseModelStream
             return io.smallrye.mutiny.Uni.createFrom().completionStage(
                     () -> resolveCredentials(model, options)
             ).toMulti().onItem().transformToMultiAndConcatenate(resolved -> {
+                options.cancellation().throwIfCancelled();
                 if (resolved == null) {
                     return Multi.createFrom().failure(
                             new IllegalArgumentException(
@@ -184,16 +186,56 @@ public final class BedrockConverseModelStream
             StreamOptions options
     ) {
         try {
+            options.cancellation().throwIfCancelled();
             CompletionStage<AwsCredentials> stage = credentials.resolve(
                     model, options.cancellation()
             );
-            return stage == null ? CompletableFuture.failedFuture(
+            if (stage == null) return CompletableFuture.failedFuture(
                     new NullPointerException(
                             "AsyncAwsCredentialsProvider returned null stage"
                     )
-            ) : stage;
+            );
+            return awaitCredentials(stage, options.cancellation());
         } catch (Throwable failure) {
             return CompletableFuture.failedFuture(failure);
+        }
+    }
+
+    private static CompletionStage<AwsCredentials> awaitCredentials(
+            CompletionStage<AwsCredentials> stage,
+            CancellationSignal cancellation
+    ) {
+        CompletableFuture<AwsCredentials> result = new CompletableFuture<>();
+        AutoCloseable registration;
+        try {
+            registration = cancellation.onCancel(() ->
+                    result.completeExceptionally(new CancellationException(
+                            "AWS credential resolution cancelled"
+                    ))
+            );
+        } catch (Throwable failure) {
+            return CompletableFuture.failedFuture(failure);
+        }
+        stage.whenComplete((value, failure) -> {
+            if (cancellation.isCancelled()) {
+                result.completeExceptionally(new CancellationException(
+                        "AWS credential resolution cancelled"
+                ));
+            } else if (failure != null) {
+                result.completeExceptionally(failure);
+            } else {
+                result.complete(value);
+            }
+        });
+        result.whenComplete((value, failure) -> close(registration));
+        return result;
+    }
+
+    private static void close(AutoCloseable registration) {
+        try {
+            registration.close();
+        } catch (Exception ignored) {
+            // Cancellation callback cleanup is advisory.
         }
     }
 

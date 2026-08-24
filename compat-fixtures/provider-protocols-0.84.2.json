@@ -185,6 +185,275 @@
         "display": "summarized"
       }
     },
+    "deferredToolsRequest": {
+      "model": "claude-sonnet-4-5",
+      "messages": [
+        {
+          "role": "user",
+          "content": "hello"
+        },
+        {
+          "role": "assistant",
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "call-lookup",
+              "name": "lookup",
+              "input": {
+                "q": "x"
+              }
+            }
+          ]
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "tool_result",
+              "tool_use_id": "call-lookup",
+              "content": [
+                {
+                  "type": "tool_reference",
+                  "tool_name": "fetch"
+                }
+              ],
+              "is_error": false
+            },
+            {
+              "type": "text",
+              "text": "lookup result",
+              "cache_control": {
+                "type": "ephemeral"
+              }
+            }
+          ]
+        }
+      ],
+      "max_tokens": 16384,
+      "stream": true,
+      "system": [
+        {
+          "type": "text",
+          "text": "system",
+          "cache_control": {
+            "type": "ephemeral"
+          }
+        }
+      ],
+      "tools": [
+        {
+          "name": "lookup",
+          "description": "Lookup",
+          "eager_input_streaming": true,
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "q": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "q"
+            ]
+          },
+          "cache_control": {
+            "type": "ephemeral"
+          }
+        },
+        {
+          "name": "fetch",
+          "description": "Fetch",
+          "eager_input_streaming": true,
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          },
+          "defer_loading": true
+        }
+      ],
+      "thinking": {
+        "type": "enabled",
+        "budget_tokens": 8192,
+        "display": "summarized"
+      }
+    },
+    "allDeferredFallbackRequest": {
+      "model": "claude-sonnet-4-5",
+      "messages": [
+        {
+          "role": "user",
+          "content": "hello"
+        },
+        {
+          "role": "assistant",
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "call-lookup",
+              "name": "lookup",
+              "input": {
+                "q": "x"
+              }
+            }
+          ]
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "tool_result",
+              "tool_use_id": "call-lookup",
+              "content": "lookup result",
+              "is_error": false,
+              "cache_control": {
+                "type": "ephemeral"
+              }
+            }
+          ]
+        }
+      ],
+      "max_tokens": 16384,
+      "stream": true,
+      "system": [
+        {
+          "type": "text",
+          "text": "system",
+          "cache_control": {
+            "type": "ephemeral"
+          }
+        }
+      ],
+      "tools": [
+        {
+          "name": "fetch",
+          "description": "Fetch",
+          "eager_input_streaming": true,
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          },
+          "cache_control": {
+            "type": "ephemeral"
+          }
+        }
+      ],
+      "thinking": {
+        "type": "enabled",
+        "budget_tokens": 8192,
+        "display": "summarized"
+      }
+    },
+    "longCacheRequest": {
+      "model": "claude-sonnet-4-5",
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "hello",
+              "cache_control": {
+                "type": "ephemeral",
+                "ttl": "1h"
+              }
+            }
+          ]
+        }
+      ],
+      "max_tokens": 16384,
+      "stream": true,
+      "system": [
+        {
+          "type": "text",
+          "text": "system",
+          "cache_control": {
+            "type": "ephemeral",
+            "ttl": "1h"
+          }
+        }
+      ],
+      "tools": [
+        {
+          "name": "lookup",
+          "description": "Lookup",
+          "eager_input_streaming": true,
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "q": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "q"
+            ]
+          },
+          "cache_control": {
+            "type": "ephemeral",
+            "ttl": "1h"
+          }
+        }
+      ],
+      "thinking": {
+        "type": "enabled",
+        "budget_tokens": 8192,
+        "display": "summarized"
+      }
+    },
+    "noCacheRequest": {
+      "model": "claude-sonnet-4-5",
+      "messages": [
+        {
+          "role": "user",
+          "content": "hello"
+        }
+      ],
+      "max_tokens": 16384,
+      "stream": true,
+      "system": [
+        {
+          "type": "text",
+          "text": "system"
+        }
+      ],
+      "tools": [
+        {
+          "name": "lookup",
+          "description": "Lookup",
+          "eager_input_streaming": true,
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "q": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "q"
+            ]
+          }
+        }
+      ],
+      "thinking": {
+        "type": "enabled",
+        "budget_tokens": 8192,
+        "display": "summarized"
+      }
+    },
     "frames": [
       {
         "type": "message_start",

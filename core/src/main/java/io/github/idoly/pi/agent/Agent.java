@@ -869,6 +869,7 @@ public final class Agent {
                 finalized.result().content(),
                 finalized.result().details(),
                 finalized.result().usage(),
+                finalized.result().addedToolNames(),
                 finalized.error(),
                 clock.millis()
         );

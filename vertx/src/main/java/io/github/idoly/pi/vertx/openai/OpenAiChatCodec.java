@@ -329,6 +329,7 @@ public final class OpenAiChatCodec {
         private TextPart text;
         private boolean started;
         private boolean contentEnded;
+        private boolean finishSeen;
         private boolean terminated;
 
         private Decoder(Model model, Map<String, OpenAiGrammar.Grammar> grammars) {
@@ -365,6 +366,7 @@ public final class OpenAiChatCodec {
                 return List.of(new AssistantStreamEvent.Error(errorMessage(message)));
             }
             updateUsage(root.path("usage"));
+            if (finishSeen) return List.of();
             JsonNode choices = root.path("choices");
             if (!choices.isArray() || choices.isEmpty()) {
                 return List.of();
@@ -383,6 +385,7 @@ public final class OpenAiChatCodec {
             JsonNode finishReason = choice.path("finish_reason");
             if (finishReason.isTextual()) {
                 mapStopReason(finishReason.textValue());
+                finishSeen = true;
             }
             return output;
         }

@@ -179,7 +179,8 @@ public final class VertxModelProviders implements ModelStream, AutoCloseable {
                                     options.sessionId(), apiKey,
                                     options.thinkingLevel(),
                                     options.cancellation(), effectiveHeaders,
-                                    options.requestHooks()
+                                    options.requestHooks(),
+                                    options.cacheRetention()
                             );
                         })).toMulti().onItem().transformToMultiAndConcatenate(
                                 effective -> io.smallrye.mutiny.Multi.createFrom()

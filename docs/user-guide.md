@@ -210,7 +210,7 @@ UserMessage multimodal = new UserMessage(
 );
 ```
 
-User message只允许text和image。Assistant message可包含text、thinking和tool call。Tool result使用`ToolResultMessage`。所有内容records均为immutable；传入collection会被防御性复制。
+User message只允许text和image。Assistant message可包含text、thinking和tool call。Tool result使用`ToolResultMessage`；`addedToolNames`记录该结果之后新进入`Context.tools`的定义，用于支持原生deferred tool loading的Provider。该列表随JSONL持久化，空列表不改变旧v4 wire shape。所有内容records均为immutable；传入collection会被防御性复制。
 
 ## 5. Agent运行方式
 
@@ -966,7 +966,7 @@ SkillInvocation invocation = dispatcher
         .orElseThrow();
 ```
 
-`SkillInvocation`同时提供完整prompt、source、scope和`allowedTools`。Host必须先根据自己的权限策略解释并授权`allowedTools`，再把prompt交给Agent；SDK不会把frontmatter中的字符串自动提升为工具权限。`dispatcher.commands()`可直接用于headless command palette metadata。Extension command、Skill command、session replacement和compaction的完整host编排见[`examples/HeadlessExtensionHost.java`](../examples/HeadlessExtensionHost.java)。
+`SkillInvocation`同时提供完整prompt、source、scope和`allowedTools`。Host必须先根据自己的权限策略解释并授权`allowedTools`，再把prompt交给Agent；SDK不会把frontmatter中的字符串自动提升为工具权限。`dispatcher.commands()`可直接用于headless command palette metadata。Extension command、Skill command、session replacement和compaction的完整host编排见[`examples/HeadlessExtensionHost.java`](../examples/HeadlessExtensionHost.java)。JSONL session、Provider registry、异步credentials、Skills、Extensions、Agent事件持久化和有序shutdown的完整生命周期见[`examples/HeadlessAgentRuntime.java`](../examples/HeadlessAgentRuntime.java)。
 
 支持：
 
@@ -1019,6 +1019,8 @@ google-generative-ai
 google-vertex
 bedrock-converse-stream
 ```
+
+Anthropic默认使用`CacheRetention.SHORT`；`StreamOptions.withCacheRetention(CacheRetention.LONG)`会发送上游兼容的`ttl: 1h`，`NONE`会移除system、tool和conversation cache markers。兼容旧配置时，未显式设置且`PI_CACHE_RETENTION=long`也会选择long。支持tool references的Claude模型会把`addedToolNames`对应定义编码为`defer_loading` tools，并在加载点发送`tool_reference`；若首批全部被标记deferred，则按上游行为回退为立即加载，避免空工具集。
 
 Google Vertex接受API key或host提供的OAuth access token，并使用`GOOGLE_CLOUD_PROJECT`和`GOOGLE_CLOUD_LOCATION`展开catalog endpoint。OAuth token不按内容猜测类型：host的异步`ApiKeyResolver`应在每次调用时刷新并返回完整的`Bearer <access-token>`值；直接调用`ModelStream`时也可在`StreamOptions.headers()`提供`Authorization: Bearer <access-token>`。旧的`ya29.`和JWT前缀token仍保持兼容。SDK不读取或持久化OAuth refresh credential。
 

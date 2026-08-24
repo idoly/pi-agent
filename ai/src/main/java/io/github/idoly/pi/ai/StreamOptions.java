@@ -6,8 +6,23 @@ public record StreamOptions(
         String thinkingLevel,
         CancellationSignal cancellation,
         java.util.Map<String, String> headers,
-        ProviderRequestHooks requestHooks
+        ProviderRequestHooks requestHooks,
+        CacheRetention cacheRetention
 ) {
+    public StreamOptions(
+            String sessionId,
+            String apiKey,
+            String thinkingLevel,
+            CancellationSignal cancellation,
+            java.util.Map<String, String> headers,
+            ProviderRequestHooks requestHooks
+    ) {
+        this(
+                sessionId, apiKey, thinkingLevel, cancellation, headers,
+                requestHooks, null
+        );
+    }
+
     public StreamOptions(
             String sessionId,
             String apiKey,
@@ -17,7 +32,7 @@ public record StreamOptions(
     ) {
         this(
                 sessionId, apiKey, thinkingLevel, cancellation, headers,
-                ProviderRequestHooks.NONE
+                ProviderRequestHooks.NONE, null
         );
     }
 
@@ -29,7 +44,7 @@ public record StreamOptions(
     ) {
         this(
                 sessionId, apiKey, thinkingLevel, cancellation,
-                java.util.Map.of(), ProviderRequestHooks.NONE
+                java.util.Map.of(), ProviderRequestHooks.NONE, null
         );
     }
 
@@ -43,7 +58,15 @@ public record StreamOptions(
 
     public StreamOptions withRequestHooks(ProviderRequestHooks hooks) {
         return new StreamOptions(
-                sessionId, apiKey, thinkingLevel, cancellation, headers, hooks
+                sessionId, apiKey, thinkingLevel, cancellation, headers, hooks,
+                cacheRetention
+        );
+    }
+
+    public StreamOptions withCacheRetention(CacheRetention retention) {
+        return new StreamOptions(
+                sessionId, apiKey, thinkingLevel, cancellation, headers,
+                requestHooks, retention
         );
     }
 }

@@ -492,6 +492,10 @@ final class JsonlSessionCodec {
                 node.set("content", encodeBlocks(value.content()));
                 node.set("details", MAPPER.valueToTree(value.details()));
                 if (value.usage() != null) node.set("usage", encodeUsage(value.usage()));
+                if (!value.addedToolNames().isEmpty()) {
+                    ArrayNode names = node.putArray("addedToolNames");
+                    value.addedToolNames().forEach(names::add);
+                }
                 node.put("isError", value.error());
             }
             case CompactionSummaryMessage value -> {
@@ -526,6 +530,8 @@ final class JsonlSessionCodec {
                     text(node, "toolCallId"), text(node, "toolName"),
                     decodeBlocks(required(node, "content")), objectMap(node.get("details")),
                     node.has("usage") ? decodeUsage(node.get("usage")) : null,
+                    node.has("addedToolNames")
+                            ? strings(node, "addedToolNames") : List.of(),
                     optionalBoolean(node, "isError", false), timestamp
             );
             case "compactionSummary" -> new CompactionSummaryMessage(

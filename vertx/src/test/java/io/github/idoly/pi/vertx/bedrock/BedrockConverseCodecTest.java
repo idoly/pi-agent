@@ -96,6 +96,23 @@ class BedrockConverseCodecTest {
     }
 
     @Test
+    void rejectsMessageStopWithoutTerminalMetadata() {
+        IllegalStateException failure = assertThrows(
+                IllegalStateException.class,
+                () -> codec.decode(
+                        Multi.createFrom().item(concat(
+                                frame("messageStart", "{\"role\":\"assistant\"}"),
+                                frame("messageStop", "{\"stopReason\":\"end_turn\"}")
+                        )), model()
+                ).collect().asList().await().indefinitely()
+        );
+        assertEquals(
+                "Bedrock stream ended without a stop reason",
+                failure.getMessage()
+        );
+    }
+
+    @Test
     void ignoresSmithyEventsAfterEitherTerminalEvent() {
         List<AssistantStreamEvent> afterError = codec.decode(
                 Multi.createFrom().item(concat(

@@ -72,6 +72,50 @@ class AgentToolLoopTest {
     }
 
     @Test
+    void persistsToolNamesAddedByExecutionResults() {
+        AgentTool loader = new AgentTool() {
+            @Override
+            public ToolDefinition definition() {
+                return new ToolDefinition(
+                        "loader", "Loads tools", Map.of("type", "object")
+                );
+            }
+
+            @Override
+            public java.util.concurrent.CompletionStage<AgentToolResult> execute(
+                    String toolCallId,
+                    Map<String, Object> arguments,
+                    io.github.idoly.pi.ai.CancellationSignal cancellation,
+                    java.util.function.Consumer<AgentToolResult> onUpdate
+            ) {
+                return CompletableFuture.completedFuture(new AgentToolResult(
+                        List.of(new TextContent("loaded")), Map.of(), null,
+                        List.of("fetch", "read"), false
+                ));
+            }
+        };
+        ScriptedModelStream stream = ScriptedModelStream.turns(List.of(
+                List.of(new AssistantStreamEvent.Done(toolCallingMessage(
+                        new ToolCallContent("call", "loader", Map.of())
+                ))),
+                List.of(new AssistantStreamEvent.Done(
+                        ScriptedMessages.assistant("finished", StopReason.STOP)
+                ))
+        ));
+        Agent agent = new Agent(new AgentOptions(
+                "", ScriptedMessages.model(), stream, List.of(loader)
+        ));
+
+        agent.prompt("load").toCompletableFuture().join();
+
+        ToolResultMessage result = agent.state().messages().stream()
+                .filter(ToolResultMessage.class::isInstance)
+                .map(ToolResultMessage.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(List.of("fetch", "read"), result.addedToolNames());
+    }
+
+    @Test
     void sequentialToolForcesTheWholeBatchToRunOneAtATime() {
         SequentialControlledTool tool = new SequentialControlledTool();
         ScriptedModelStream stream = ScriptedModelStream.turns(List.of(
