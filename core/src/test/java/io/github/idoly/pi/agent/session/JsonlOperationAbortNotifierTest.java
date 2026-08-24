@@ -156,7 +156,7 @@ class JsonlOperationAbortNotifierTest {
             ));
             Files.createDirectories(marker.getParent());
             Files.writeString(marker, "forged", StandardCharsets.UTF_8);
-            Thread.sleep(100);
+            awaitRejected(repository, 1);
             assertEquals(0, cancellations.get());
             assertFalse(owner.rawState().hasAbortRequest("main", "run"));
 
