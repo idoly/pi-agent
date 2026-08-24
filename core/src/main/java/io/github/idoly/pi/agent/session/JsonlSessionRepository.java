@@ -1831,10 +1831,6 @@ public final class JsonlSessionRepository implements SessionRepository {
             Runnable notify,
             WatchServiceFactory watchServiceFactory
     ) {
-        if (Files.exists(marker)) {
-            notify.run();
-            if (signaled.get()) return true;
-        }
         try {
             Files.createDirectories(marker.getParent());
             try (WatchService watcher = watchServiceFactory.open(marker)) {
