@@ -61,6 +61,7 @@ cross-machine comparisons invalid.
 | Remote abort | Independent JVM Provider, single tool, and parallel tool cancellation and settlement. |
 | Forged advisory | Marker and external notifications require exact durable lane/run records. |
 | WatchService unavailable | Injected factory failure records fallback and completes cancellation through polling. |
+| Coalesced WatchService events | Timeout-based marker-stamp reconciliation detects a later durable abort even when a platform coalesces modify events for an existing forged marker. |
 | Static rejected marker | Change-driven polling debounces a stamp until two consecutive observations, avoiding duplicate verification during truncate/write transitions and repeated reads after stability. |
 | Checkpoint mutation race | Independent JVM append/delete/create while immutable manifests are captured and verified. |
 | Bounded recovery | 128 generations cross scan and detail page boundaries without count duplication. |
