@@ -43,11 +43,14 @@ the root POM are correct for the publishing account.
 Credentialed service checks are a separate, potentially billable gate:
 
 ```bash
-mvn --batch-mode -Pprovider-live-tests -pl vertx -am verify
+PI_LIVE_DEEP=true mvn --batch-mode \
+  -Pprovider-live-tests -pl vertx -am verify
 ```
 
 A provider without configured credentials is skipped, so inspect the Failsafe
-summary and require zero skips for the services claimed by a release run.
+summary and require zero skips for the services claimed by a release run. Do
+not use the non-deep smoke mode as release evidence: the deep gate adds tool,
+reasoning, cancellation, invalid-authentication, and Anthropic cache checks.
 
 After `0.1.0` is available from the configured Maven repositories, later
 releases compare all three public artifacts with japicmp:

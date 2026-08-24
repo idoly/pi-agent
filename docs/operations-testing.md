@@ -10,8 +10,25 @@ mvn -Pprovider-live-tests -pl vertx -am verify
 ```
 
 Each test is skipped unless its credential environment is present. These tests
-send a real prompt and may incur Provider charges. Defaults select a small
-catalog model; override them when the account does not expose that model.
+send real prompts and may incur Provider charges. Defaults select a small
+catalog model; override them when the account does not expose that model. The
+normal live mode verifies streaming, a single terminal event, non-empty text,
+and non-zero input/output/total usage.
+
+Set `PI_LIVE_DEEP=true` for the release-candidate service gate:
+
+```bash
+PI_LIVE_DEEP=true mvn -Pprovider-live-tests -pl vertx -am verify
+```
+
+Deep mode additionally requires a structured tool call, verifies thinking
+content or reasoning-token usage for catalog models marked as reasoning,
+cancels an active long response and requires prompt settlement, and verifies
+that a deliberately invalid cloud credential produces HTTP 400, 401, or 403.
+The Anthropic test also sends a stable cacheable prefix twice and requires
+reported cache-write or cache-read usage. The local OpenAI-compatible target is
+not required to reject an invalid credential because local servers may
+intentionally run without authentication.
 
 | Provider | Required environment | Optional model override |
 | --- | --- | --- |
@@ -23,9 +40,12 @@ catalog model; override them when the account does not expose that model.
 | Bedrock | `AWS_BEARER_TOKEN_BEDROCK`, or environment access/secret keys | `PI_LIVE_BEDROCK_MODEL`, `AWS_REGION` |
 | Local OpenAI-compatible | `PI_LIVE_OPENAI_COMPAT_BASE_URL`, `PI_LIVE_OPENAI_COMPAT_MODEL` | `PI_LIVE_OPENAI_COMPAT_API_KEY` |
 
-The suite requires a terminal `Done` event with non-empty text and rejects
-terminal error events. A skipped run validates profile wiring but is not proof
-of service compatibility. CI deliberately supplies no cloud credentials.
+A skipped run validates profile wiring but is not proof of service
+compatibility. A non-deep run is a smoke test, not evidence for tool, thinking,
+cache, cancellation, or authentication-error behavior. CI deliberately
+supplies no cloud credentials. Inspect the Failsafe summary: the seven test
+methods remain provider-level gates in both modes, so a deep failure identifies
+the affected Provider while an absent Provider credential remains one skip.
 
 ## Recovery trend benchmark
 

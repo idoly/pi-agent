@@ -26,7 +26,7 @@ Status meanings:
 | Google AI Studio/Vertex | `COMPATIBLE` | `GoogleGenerativeModelStream` | Upstream protocol fixture |
 | Mistral Conversations | `COMPATIBLE` | `MistralConversationsModelStream` | Final wire payload and reasoning-effort fixtures |
 | Bedrock ConverseStream | `COMPATIBLE` | `BedrockConverseModelStream` | Command/event/modeled-error fixture and CRC tests |
-| Live cloud credential flows | `HOST_ORCHESTRATED` | Explicit Vertex Bearer/header contract and `AsyncAwsCredentialsProvider` | Opaque-token tests, cancellation/pending/failing AWS refresh tests, and opt-in credential-gated live profile |
+| Live cloud credential flows | `HOST_ORCHESTRATED` | Explicit Vertex Bearer/header contract and `AsyncAwsCredentialsProvider` | Opaque-token and AWS refresh tests plus opt-in live smoke/deep gates for stream, usage, tool, thinking, cancellation, invalid authentication, and Anthropic cache behavior |
 | TUI login menu | `NON_GOAL` | Host supplies interaction UI | Not applicable |
 
 ## Agent and sessions
@@ -84,5 +84,5 @@ Status meanings:
 The remaining work before a stable `0.1.0` is operational rather than another module split:
 
 1. Run the configured `api-compat` profile against Central after `0.1.0` is published.
-2. Run each credentialed live-provider test against an authorized account.
+2. Run each credentialed live-provider test with `PI_LIVE_DEEP=true` against an authorized account and retain the Failsafe reports as release evidence.
 3. Verify Sonatype Central publication with external credentials and signing keys.

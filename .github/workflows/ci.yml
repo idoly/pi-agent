@@ -103,6 +103,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ''
           PI_LIVE_OPENAI_COMPAT_BASE_URL: ''
           PI_LIVE_OPENAI_COMPAT_MODEL: ''
+          PI_LIVE_DEEP: 'true'
         run: |
           set -euo pipefail
           mvn --batch-mode --no-transfer-progress -q -Pprovider-live-tests -pl vertx -am failsafe:integration-test failsafe:verify
